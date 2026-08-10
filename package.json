@@ -1,0 +1,23 @@
+{
+  "name": "beecode-ai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "check": "pnpm typecheck && pnpm test",
+    "test:smoke": "pnpm --filter @beecode/backend test:smoke",
+    "cli": "pnpm --filter @beecode/cli start",
+    "backend": "pnpm --filter @beecode/backend start"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.8"
+  }
+}

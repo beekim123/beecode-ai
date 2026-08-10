@@ -1,0 +1,17 @@
+node_modules/
+.pnpm-store/
+# 本地配置与数据可能包含供应商密钥、访问令牌和会话内容
+backend-config.json
+backend-data.json
+backend-data.json.tmp
+
+# 环境变量文件也常用于保存密钥；保留可提交的示例文件
+.env
+.env.*
+!.env.example
+
+# 构建与测试产物
+**/dist/
+coverage/
+*.tsbuildinfo
+.DS_Store

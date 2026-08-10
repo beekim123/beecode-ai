@@ -1,0 +1,29 @@
+{
+  "name": "@beecode/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "beecode": "./src/main.ts"
+  },
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.test.json"
+  },
+  "dependencies": {
+    "@beecode/agent-core": "workspace:*",
+    "@beecode/agent-server": "workspace:*",
+    "@beecode/client-sdk": "workspace:*",
+    "@beecode/protocol": "workspace:*",
+    "@beecode/tools": "workspace:*"
+  },
+  "devDependencies": {
+    "@beecode/backend": "workspace:*",
+    "@beecode/testing": "workspace:*",
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.8"
+  }
+}

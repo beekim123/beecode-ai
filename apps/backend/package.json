@@ -1,0 +1,27 @@
+{
+  "name": "@beecode/backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "test": "vitest run",
+    "test:smoke": "tsx src/provider/anthropic-smoke.ts",
+    "typecheck": "tsc -p tsconfig.test.json"
+  },
+  "dependencies": {
+    "@beecode/protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "@beecode/agent-core": "workspace:*",
+    "@beecode/agent-server": "workspace:*",
+    "@beecode/tools": "workspace:*",
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.8"
+  }
+}

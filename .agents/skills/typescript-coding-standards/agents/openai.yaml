@@ -1,0 +1,4 @@
+interface:
+  display_name: "TypeScript Coding Standards"
+  short_description: "Write and review clear, type-safe TypeScript"
+  default_prompt: "Use $typescript-coding-standards to implement or review this TypeScript code for clarity, type safety, naming, and comments."

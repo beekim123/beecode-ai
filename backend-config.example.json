@@ -1,0 +1,6 @@
+{
+  "provider": "openai",
+  "openaiApiKey": "your-deepseek-api-key",
+  "openaiModel": "deepseek-v4-flash",
+  "openaiBaseUrl": "https://api.deepseek.com/v1"
+}

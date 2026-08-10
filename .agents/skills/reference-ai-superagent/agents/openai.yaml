@@ -1,0 +1,4 @@
+interface:
+  display_name: "Reference AI SuperAgent"
+  short_description: "Browse the complete AI_SuperAgent feature map"
+  default_prompt: "Use $reference-ai-superagent to find the exact AI_SuperAgent files and design points relevant to this agent feature."
