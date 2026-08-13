@@ -96,6 +96,46 @@ struct BeecodeClientTests {
         }
     }
 
+    @Test
+    func submitsAnIdempotentTurnAndCancelsItThroughIOSRoutes() async throws {
+        let transport = ScriptedTransport(responses: [
+            .init(
+                statusCode: 202,
+                body: """
+                {
+                  "turn": {
+                    "id": "turn_1",
+                    "sessionId": "ses_1",
+                    "index": 1,
+                    "status": "queued",
+                    "userMessageId": "msg_user"
+                  }
+                }
+                """
+            ),
+            .init(statusCode: 204, body: ""),
+        ])
+        let client = try await makeClient(transport: transport)
+
+        let turn = try await client.submitTurn(
+            sessionId: "ses_1",
+            text: "计算 1+1",
+            idempotencyKey: "idem-ios-0001"
+        )
+        try await client.cancelTurn(sessionId: "ses_1", turnId: turn.id)
+
+        #expect(turn.status == .queued)
+        let requests = await transport.capturedRequests()
+        #expect(requests.map(\.url?.path) == [
+            "/v1/ios/sessions/ses_1/turns",
+            "/v1/ios/sessions/ses_1/turns/turn_1/cancel",
+        ])
+        let requestBody = try #require(requests.first?.httpBody)
+        let body = try JSONDecoder().decode(APISubmitTurnRequest.self, from: requestBody)
+        #expect(body.text == "计算 1+1")
+        #expect(body.idempotencyKey == "idem-ios-0001")
+    }
+
     private func makeClient(transport: ScriptedTransport) async throws -> BeecodeClient {
         let configuration = AppConfiguration(
             apiBaseURL: URL(string: "https://api.test")!,

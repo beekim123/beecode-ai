@@ -1,6 +1,6 @@
 # Beecode 第三阶段 iOS 原生开发设计
 
-> 状态：Slice 0-Slice 3 已实现，Slice 4+ 未开始；真机签名与 Backend 环境待配置  
+> 状态：Slice 0-Slice 5 已实现；真机签名、Backend 环境和真实模型 Smoke 待配置
 > 范围：iOS 原生客户端、后端 iOS Runtime、移动端 OAuth、Swift Client 与协议行为测试  
 > 更新日期：2026-08-13  
 > 上游文档：[Beecode 产品规格](../product/beecode-product-spec.md)  
@@ -703,12 +703,16 @@ XCUITest 最高优先级路径：
 
 完成条件：“计算 1+1”产生真实 Tool Call、结果 `2` 与最终回答。
 
+当前状态：已完成。iOS 使用稳定 idempotency key 提交 Turn，通过 Session reducer 投影消息、工具和终态，并提供多行 Composer、停止、Tool Activity、Tool Detail、最终回答与 usage。Backend iOS 路由集成测试证明 `FakeProviderAdapter -> Agent Runtime -> calculator` 的真实后端工具链得到 `2` 与最终回答；XCUITest 覆盖同一用户流程的 UI 展示。
+
 ### Slice 5：SSE 与生命周期恢复
 
 - AsyncBytes SSE parser、重连 generation、退避和 snapshot merge。
 - 前后台、断网、App 重启和 Backend 重启恢复。
 
 完成条件：网络与生命周期中断不制造重复 Turn，不丢失权威结果。
+
+当前状态：已完成。`SessionEventStream` actor 通过 `URLSession.AsyncBytes` 消费 SSE，支持 CRLF、多行 data、心跳、未知字段、401 单次刷新、generation 取消、有界指数退避与抖动；系统离线时等待 `NWPathMonitor` 恢复。每次连接先缓冲事件、再读取权威快照并按 sequence 合并，终态再次刷新快照。App 进入后台停止观察，回到前台重新连接并执行同一恢复流程。
 
 ### Slice 6：产品完整状态
 
@@ -781,11 +785,13 @@ XCUITest 最高优先级路径：
 - Slice 1 已完成 `/v1/ios/*`、`surface=ios` Runtime/Repository、能力 allowlist、OpenAPI 路由和 surface 隔离测试。
 - Slice 2 已完成 `beecode-ios` OAuth client、精确回调 URI、ASWebAuthenticationSession、PKCE S256、Keychain、Token refresh/revoke 和认证测试。
 - Slice 3 已完成注入式 URLSession Transport、稳定 `BeecodeClient`、Session shell、iPhone/iPad 导航和会话操作。生成 OpenAPI 包已产出，但暂未加入 App target；它是可重建的独立契约产物。
+- Slice 4 已完成 Turn 幂等提交/取消、Conversation reducer、消息与 Tool 状态、Tool Detail、usage 和 calculator 最小闭环。
+- Slice 5 已完成手写 SSE parser、`SessionEventStream` actor、401 恢复、离线等待、带抖动退避、sequence 快照合并，以及前后台重建连接。
 - Debug ATS 仅允许本地网络，Release 保持严格 ATS。默认 Debug API 地址为 Simulator 可用的 `http://127.0.0.1:8787`；真机必须改成同一局域网可达的 Backend 地址。
 - 已在 iOS 17.2 和 iOS 26.0 Simulator 验证工程构建与测试。真机体验还需要 Apple Developer Team、正式 Bundle ID/签名、可达 Backend、准确 `publicBaseUrl` 和登记过的 OAuth redirect URI。
 
 ### 24.1 第三阶段验收边界
 
-完成 Slice 3 后可以在 Simulator 或已配置签名的真机上验收：登录界面、凭据恢复/登出、iOS Session 列表、创建、打开、重命名、归档和 iPhone/iPad 导航布局。真正的 Conversation、Turn、Tool Call、SSE reducer、前后台恢复和断网重连属于 Slice 4-Slice 5，当前不应以“计算 1+1”作为本阶段已完成能力。
+完成 Slice 5 后可以在 Simulator 或已配置签名的真机上验收：登录与 Session 管理、Conversation、Turn 提交/取消、calculator Tool Call、SSE 增量更新，以及前后台/断网后的权威快照恢复。Simulator 自动化使用可控 Provider；真实 Model Gateway 仍需按 Slice 7 的 Smoke Test 单独验收，不能由 fixture 结果替代。
 
 真机验收前必须完成 [iOS 真机开发说明](../usage/ios.md) 中的环境配置；尤其不能把 `127.0.0.1` 作为真机 Backend 地址。

@@ -23,6 +23,9 @@ struct APISessionPage: Codable, Sendable {
 
 struct APISessionSnapshot: Decodable, Sendable {
     let session: APISession
+    let messages: [ConversationMessage]
+    let turns: [ConversationTurn]
+    let live: ConversationLiveState?
 }
 
 struct APICreateSessionRequest: Encodable, Sendable {
@@ -33,6 +36,15 @@ struct APIUpdateSessionRequest: Encodable, Sendable {
     let expectedVersion: Int
     let title: String?
     let status: APISessionStatus?
+}
+
+struct APISubmitTurnRequest: Codable, Sendable {
+    let text: String
+    let idempotencyKey: String
+}
+
+struct APISubmitTurnResponse: Decodable, Sendable {
+    let turn: ConversationTurn
 }
 
 struct APIErrorResponse: Decodable, Sendable {

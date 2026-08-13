@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct RootView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @Bindable var store: AppStore
 
     var body: some View {
@@ -23,6 +24,11 @@ struct RootView: View {
         }
         .task {
             await store.restore()
+        }
+        .onChange(of: scenePhase) {
+            Task {
+                await store.setSceneActive(scenePhase == .active)
+            }
         }
         .alert(
             "error.title",
@@ -91,13 +97,13 @@ private struct SessionShellView: View {
                 NavigationSplitView {
                     SessionListView(store: store, usesSelection: true)
                 } detail: {
-                    SessionDetailView(session: store.selectedSession)
+                    SessionDetailView(store: store, session: store.selectedSession)
                 }
             } else {
                 NavigationStack {
                     SessionListView(store: store, usesSelection: false)
                         .navigationDestination(for: BeecodeSession.self) { session in
-                            SessionDetailView(session: session)
+                            SessionDetailView(store: store, session: session)
                         }
                 }
             }
@@ -243,26 +249,12 @@ private struct SessionRow: View {
 }
 
 private struct SessionDetailView: View {
+    let store: AppStore
     let session: BeecodeSession?
 
     var body: some View {
         if let session {
-            VStack(spacing: 16) {
-                Image(systemName: "bubble.left.and.text.bubble.right")
-                    .font(.system(size: 38))
-                    .foregroundStyle(.secondary)
-                    .accessibilityHidden(true)
-                Text(session.title)
-                    .font(.title2.bold())
-                    .multilineTextAlignment(.center)
-                Text("session.shell-ready")
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .accessibilityIdentifier("beecode.session.detail")
-            }
-            .padding(24)
-            .navigationTitle(session.title)
-            .navigationBarTitleDisplayMode(.inline)
+            ConversationView(store: store, session: session)
         } else {
             ContentUnavailableView("session.select", systemImage: "sidebar.left")
         }

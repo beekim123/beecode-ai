@@ -22,6 +22,14 @@
 		A0000000000000000000000D /* PKCETests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000013 /* PKCETests.swift */; };
 		A0000000000000000000000E /* TokenVaultTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000014 /* TokenVaultTests.swift */; };
 		A0000000000000000000000F /* BeecodeClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000015 /* BeecodeClientTests.swift */; };
+		A00000000000000000000010 /* ConversationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000016 /* ConversationModels.swift */; };
+		A00000000000000000000011 /* SessionReducer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000017 /* SessionReducer.swift */; };
+		A00000000000000000000012 /* SSEParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000018 /* SSEParser.swift */; };
+		A00000000000000000000013 /* SessionEventStream.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000019 /* SessionEventStream.swift */; };
+		A00000000000000000000014 /* ConversationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000001A /* ConversationView.swift */; };
+		A00000000000000000000015 /* SessionReducerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000001B /* SessionReducerTests.swift */; };
+		A00000000000000000000016 /* SSEParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000001C /* SSEParserTests.swift */; };
+		A00000000000000000000017 /* SessionEventStreamTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000001D /* SessionEventStreamTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -63,6 +71,14 @@
 		B00000000000000000000013 /* PKCETests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PKCETests.swift; sourceTree = "<group>"; };
 		B00000000000000000000014 /* TokenVaultTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenVaultTests.swift; sourceTree = "<group>"; };
 		B00000000000000000000015 /* BeecodeClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BeecodeClientTests.swift; sourceTree = "<group>"; };
+		B00000000000000000000016 /* ConversationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationModels.swift; sourceTree = "<group>"; };
+		B00000000000000000000017 /* SessionReducer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionReducer.swift; sourceTree = "<group>"; };
+		B00000000000000000000018 /* SSEParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSEParser.swift; sourceTree = "<group>"; };
+		B00000000000000000000019 /* SessionEventStream.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionEventStream.swift; sourceTree = "<group>"; };
+		B0000000000000000000001A /* ConversationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationView.swift; sourceTree = "<group>"; };
+		B0000000000000000000001B /* SessionReducerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionReducerTests.swift; sourceTree = "<group>"; };
+		B0000000000000000000001C /* SSEParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSEParserTests.swift; sourceTree = "<group>"; };
+		B0000000000000000000001D /* SessionEventStreamTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionEventStreamTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -129,6 +145,7 @@
 				B00000000000000000000001 /* BeecodeApp.swift */,
 				B00000000000000000000002 /* RootView.swift */,
 				B00000000000000000000012 /* AppStore.swift */,
+				B0000000000000000000001A /* ConversationView.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -138,6 +155,8 @@
 			children = (
 				B00000000000000000000003 /* AppMetadata.swift */,
 				B0000000000000000000000D /* AppConfiguration.swift */,
+				B00000000000000000000016 /* ConversationModels.swift */,
+				B00000000000000000000017 /* SessionReducer.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -166,6 +185,8 @@
 				B00000000000000000000005 /* AppMetadataTests.swift */,
 				B00000000000000000000013 /* PKCETests.swift */,
 				B00000000000000000000014 /* TokenVaultTests.swift */,
+				B0000000000000000000001B /* SessionReducerTests.swift */,
+				B0000000000000000000001C /* SSEParserTests.swift */,
 			);
 			path = Unit;
 			sourceTree = "<group>";
@@ -202,6 +223,8 @@
 				B0000000000000000000000F /* HTTPTransport.swift */,
 				B00000000000000000000010 /* BeecodeClient.swift */,
 				B00000000000000000000011 /* TransportModels.swift */,
+				B00000000000000000000018 /* SSEParser.swift */,
+				B00000000000000000000019 /* SessionEventStream.swift */,
 			);
 			path = Networking;
 			sourceTree = "<group>";
@@ -217,6 +240,7 @@
 			isa = PBXGroup;
 			children = (
 				B00000000000000000000015 /* BeecodeClientTests.swift */,
+				B0000000000000000000001D /* SessionEventStreamTests.swift */,
 			);
 			path = Integration;
 			sourceTree = "<group>";
@@ -344,6 +368,11 @@
 				A0000000000000000000000A /* BeecodeClient.swift in Sources */,
 				A0000000000000000000000B /* TransportModels.swift in Sources */,
 				A0000000000000000000000C /* AppStore.swift in Sources */,
+				A00000000000000000000010 /* ConversationModels.swift in Sources */,
+				A00000000000000000000011 /* SessionReducer.swift in Sources */,
+				A00000000000000000000012 /* SSEParser.swift in Sources */,
+				A00000000000000000000013 /* SessionEventStream.swift in Sources */,
+				A00000000000000000000014 /* ConversationView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -355,6 +384,9 @@
 				A0000000000000000000000D /* PKCETests.swift in Sources */,
 				A0000000000000000000000E /* TokenVaultTests.swift in Sources */,
 				A0000000000000000000000F /* BeecodeClientTests.swift in Sources */,
+				A00000000000000000000015 /* SessionReducerTests.swift in Sources */,
+				A00000000000000000000016 /* SSEParserTests.swift in Sources */,
+				A00000000000000000000017 /* SessionEventStreamTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

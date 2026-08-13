@@ -26,6 +26,7 @@ enum BeecodeClientError: Error, LocalizedError, Sendable, Equatable {
     case transport(String)
     case unauthenticated
     case http(Int, message: String?)
+    case product(Int, error: BeecodeErrorShape)
     case decoding
 
     var errorDescription: String? {
@@ -42,6 +43,8 @@ enum BeecodeClientError: Error, LocalizedError, Sendable, Equatable {
             "Please sign in again."
         case .http(let status, let message):
             message ?? "The server returned HTTP \(status)."
+        case .product(_, let error):
+            error.message
         case .decoding:
             "The server response could not be read."
         }
@@ -51,8 +54,17 @@ enum BeecodeClientError: Error, LocalizedError, Sendable, Equatable {
         if statusCode == 401 {
             return .unauthenticated
         }
-        let message = try? JSONDecoder().decode(APIErrorResponse.self, from: data).error.message
-        return .http(statusCode, message: message)
+        if let body = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
+            return .product(
+                statusCode,
+                error: BeecodeErrorShape(
+                    code: body.error.code,
+                    message: body.error.message,
+                    retryable: body.error.retryable
+                )
+            )
+        }
+        return .http(statusCode, message: nil)
     }
 }
 
@@ -88,11 +100,20 @@ actor BeecodeClient {
     }
 
     func getSession(id: String) async throws -> BeecodeSession {
+        try await getSessionSnapshot(id: id).session
+    }
+
+    func getSessionSnapshot(id: String) async throws -> ConversationSnapshot {
         let snapshot: APISessionSnapshot = try await send(
             method: "GET",
             path: "v1/ios/sessions/\(encodedPathComponent(id))"
         )
-        return try mapSession(snapshot.session)
+        return ConversationSnapshot(
+            session: try mapSession(snapshot.session),
+            messages: snapshot.messages,
+            turns: snapshot.turns,
+            live: snapshot.live
+        )
     }
 
     func renameSession(_ session: BeecodeSession, title: String) async throws -> BeecodeSession {
@@ -121,12 +142,60 @@ actor BeecodeClient {
         return try mapSession(dto)
     }
 
+    func submitTurn(
+        sessionId: String,
+        text: String,
+        idempotencyKey: String
+    ) async throws -> ConversationTurn {
+        let response: APISubmitTurnResponse = try await send(
+            method: "POST",
+            path: "v1/ios/sessions/\(encodedPathComponent(sessionId))/turns",
+            body: APISubmitTurnRequest(text: text, idempotencyKey: idempotencyKey)
+        )
+        return response.turn
+    }
+
+    func cancelTurn(sessionId: String, turnId: String) async throws {
+        try await sendWithoutResponse(
+            method: "POST",
+            path: "v1/ios/sessions/\(encodedPathComponent(sessionId))/turns/\(encodedPathComponent(turnId))/cancel"
+        )
+    }
+
     private func send<Response: Decodable & Sendable>(
         method: String,
         path: String,
         query: [URLQueryItem] = []
     ) async throws -> Response {
         try await send(method: method, path: path, query: query, bodyData: nil)
+    }
+
+    private func sendWithoutResponse(method: String, path: String) async throws {
+        let accessToken = try await tokenVault.accessToken()
+        var result = try await transport.data(
+            for: makeRequest(
+                method: method,
+                path: path,
+                query: [],
+                bodyData: nil,
+                accessToken: accessToken
+            )
+        )
+        if result.statusCode == 401 {
+            let refreshedToken = try await tokenVault.accessToken(rejectedToken: accessToken)
+            result = try await transport.data(
+                for: makeRequest(
+                    method: method,
+                    path: path,
+                    query: [],
+                    bodyData: nil,
+                    accessToken: refreshedToken
+                )
+            )
+        }
+        guard (200..<300).contains(result.statusCode) else {
+            throw BeecodeClientError.from(statusCode: result.statusCode, data: result.data)
+        }
     }
 
     private func send<Response: Decodable & Sendable, Body: Encodable & Sendable>(
