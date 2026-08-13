@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "skills": [
+    {
+      "name": "design-taste-frontend",
+      "repository": "https://github.com/leonxlnx/taste-skill.git",
+      "revision": "e988add20dab0fa97d7a76781c48961c8184288e",
+      "sourcePath": "skills/taste-skill"
+    },
+    {
+      "name": "find-skills",
+      "repository": "https://github.com/vercel-labs/skills.git",
+      "revision": "c6f69c631292444cc541ac6d91e2226b0ff247da",
+      "sourcePath": "skills/find-skills"
+    },
+    {
+      "name": "hono",
+      "repository": "https://github.com/yusukebe/hono-skill.git",
+      "revision": "0d2e8dc6fa7e9c6e1c872abdb65db422e95e9de0",
+      "sourcePath": "skills/hono"
+    },
+    {
+      "name": "ios-networking",
+      "repository": "https://github.com/dpearson2699/swift-ios-skills.git",
+      "revision": "8d90fd121a263355a4fb44fd082af1416a5c1c2a",
+      "sourcePath": "skills/ios-networking"
+    },
+    {
+      "name": "playwright-best-practices",
+      "repository": "https://github.com/currents-dev/playwright-best-practices-skill.git",
+      "revision": "283d5cbc5d11aac1abda058b16ad22c317d54dc0",
+      "sourcePath": "playwright-best-practices"
+    },
+    {
+      "name": "swift-concurrency",
+      "repository": "https://github.com/AvdLee/Swift-Concurrency-Agent-Skill.git",
+      "revision": "45fa49e4e0b2af4d43b1cb458903f8030ac993bd",
+      "sourcePath": "skills/swift-concurrency"
+    },
+    {
+      "name": "swift-testing-pro",
+      "repository": "https://github.com/twostraws/Swift-Testing-Agent-Skill.git",
+      "revision": "2d6bba14a3c8bf3694f218b92fffe617c41ae43e",
+      "sourcePath": "swift-testing-pro"
+    },
+    {
+      "name": "swiftui-expert-skill",
+      "repository": "https://github.com/AvdLee/SwiftUI-Agent-Skill.git",
+      "revision": "4c6a97d15aa5e023538c3cb06b5192f241dd451d",
+      "sourcePath": "skills/swiftui-expert-skill"
+    },
+    {
+      "name": "ux-audit",
+      "repository": "https://github.com/jezweb/claude-skills.git",
+      "revision": "e875a6bfff809e5d42c584104031e36e1f014f18",
+      "sourcePath": "plugins/dev-tools/skills/ux-audit"
+    },
+    {
+      "name": "vercel-react-best-practices",
+      "repository": "https://github.com/vercel-labs/agent-skills.git",
+      "revision": "7c180d9044c9ae2b442b567aad4e42a28dd5ed62",
+      "sourcePath": "skills/react-best-practices"
+    },
+    {
+      "name": "web-design-guidelines",
+      "repository": "https://github.com/vercel-labs/agent-skills.git",
+      "revision": "7c180d9044c9ae2b442b567aad4e42a28dd5ed62",
+      "sourcePath": "skills/web-design-guidelines"
+    }
+  ]
+}

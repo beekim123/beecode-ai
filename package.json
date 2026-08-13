@@ -7,12 +7,19 @@
     "node": ">=20"
   },
   "scripts": {
-    "test": "pnpm -r test",
+    "test": "pnpm test:skills && pnpm -r test",
+    "test:skills": "node --test tests/skills.test.mjs",
     "typecheck": "pnpm -r typecheck",
     "check": "pnpm typecheck && pnpm test",
+    "skills:check": "node scripts/skills.mjs check",
+    "skills:install": "node scripts/skills.mjs install",
+    "skills:sync": "node scripts/skills.mjs sync",
+    "ios:openapi": "node --import tsx scripts/export-ios-openapi.ts",
+    "test:e2e": "pnpm --filter @beecode/web test:e2e",
     "test:smoke": "pnpm --filter @beecode/backend test:smoke",
     "cli": "pnpm --filter @beecode/cli start",
-    "backend": "pnpm --filter @beecode/backend start"
+    "backend": "pnpm --filter @beecode/backend start",
+    "web": "pnpm --filter @beecode/web dev"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

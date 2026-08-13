@@ -15,16 +15,21 @@ describe("backend config", () => {
     expect(configFromEnv({}).host).toBe("127.0.0.1");
   });
 
-  it("requires a login secret for non-loopback listeners", () => {
-    expect(() => configFromEnv({ BEECODE_BACKEND_HOST: "0.0.0.0" })).toThrow(
+  it("disables development auth beyond loopback and requires a secret when explicitly enabled", () => {
+    expect(configFromEnv({ BEECODE_BACKEND_HOST: "0.0.0.0" }).devAuthEnabled).toBe(false);
+    expect(() => configFromEnv({
+      BEECODE_BACKEND_HOST: "0.0.0.0",
+      BEECODE_DEV_AUTH_ENABLED: "true",
+    })).toThrow(
       /BEECODE_DEV_LOGIN_SECRET/,
     );
     expect(
       configFromEnv({
         BEECODE_BACKEND_HOST: "0.0.0.0",
+        BEECODE_DEV_AUTH_ENABLED: "true",
         BEECODE_DEV_LOGIN_SECRET: "secret",
-      }).host,
-    ).toBe("0.0.0.0");
+      }).devAuthEnabled,
+    ).toBe(true);
   });
 
   it("rejects invalid numeric and provider configuration", () => {

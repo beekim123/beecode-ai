@@ -20,6 +20,21 @@ Project skills live in `.agents/skills/`. Use progressive loading so task-specif
 
 When the user explicitly asks for product requirements, a feature specification, or a PRD synthesized from an already-discussed request, load `.agents/skills/to-spec/SKILL.md`.
 
+## Platform Development
+
+Cross-platform work follows [`docs/development/platform-development-guidelines.md`](docs/development/platform-development-guidelines.md). Keep shared constraints in this root file and put only platform-specific additions in the nearest application `AGENTS.md`:
+
+- `apps/backend/AGENTS.md`
+- `apps/cli/AGENTS.md`
+- `apps/web/AGENTS.md`
+- `apps/ios/AGENTS.md`
+
+Before changing an application, read its local `AGENTS.md` and the phase design documents it routes to. Skill loading remains progressive: select only the skills needed for the current task instead of loading every skill associated with a platform.
+
+When adding a new product platform such as Android or Desktop, add its local `AGENTS.md` before production code. The local file must define its technical boundary, relevant design documents, task-to-skill routing, test locations, verification commands, and platform-specific prohibitions without copying the root rules.
+
+Changes to shared protocol, authentication, events, persistence, or surface behavior are cross-platform changes even when requested by one client. Review all affected consumers and preserve server-enforced surface isolation.
+
 ## Testing Layout
 
 - Test files must live in a dedicated test directory, never alongside production files in `src/`.

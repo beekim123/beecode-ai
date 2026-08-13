@@ -2,10 +2,14 @@ import {
   BeecodeError,
   ErrorCodes,
   type AgentEvent,
+  type AgentEventEnvelope,
   type AgentProtocolService,
   type Capability,
+  type CapabilityUnavailableReason,
   type CreateSessionInput,
   type Id,
+  type ListSessionsInput,
+  type ListSessionsResult,
   type Message,
   type Part,
   type Session,
@@ -16,6 +20,7 @@ import {
   type ToolCall,
   type ToolCallPart,
   type Turn,
+  type UpdateSessionInput,
 } from "@beecode/protocol";
 import { AgentRuntime, newId, type TurnLimits } from "@beecode/agent-core";
 import type { ToolRegistry } from "@beecode/tools";
@@ -36,10 +41,12 @@ export interface AgentServerFacadeOptions {
   limits: TurnLimits;
 }
 
-type EventHandler = (event: AgentEvent) => void;
+type EventHandler = (event: AgentEventEnvelope) => void;
+
+const DEFAULT_MAX_INPUT_BYTES = 1024 * 1024;
 
 /** 一个 Turn 的领域消息构建器：保留 Assistant -> Tool -> Assistant 的事件顺序。 */
-class TurnMessageBuilder {
+export class TurnMessageBuilder {
   private readonly messages: Message[] = [];
   private readonly assistantById = new Map<Id, Message>();
   private readonly textByPartId = new Map<Id, Extract<Part, { type: "text" }>>();
@@ -167,6 +174,7 @@ export class AgentServerFacade implements AgentProtocolService {
   private readonly surface: Surface;
   private readonly limits: TurnLimits;
   private readonly subscribers = new Map<Id, Set<EventHandler>>();
+  private readonly sequenceBySession = new Map<Id, number>();
   private readonly activeSubmissions = new Set<Id>();
   private readonly now: () => string;
 
@@ -182,11 +190,21 @@ export class AgentServerFacade implements AgentProtocolService {
   }
 
   private routeEvent(event: AgentEvent): void {
+    const sequence = (this.sequenceBySession.get(event.sessionId) ?? 0) + 1;
+    this.sequenceBySession.set(event.sessionId, sequence);
+    const envelope: AgentEventEnvelope = {
+      eventId: newId("evt"),
+      sessionId: event.sessionId,
+      turnId: event.turnId,
+      sequence,
+      occurredAt: this.now(),
+      event,
+    };
     const handlers = this.subscribers.get(event.sessionId);
     if (!handlers) return;
     for (const handler of handlers) {
       try {
-        handler(event);
+        handler(envelope);
       } catch {
         // 展示层订阅者失败不能改变 Agent Runtime 的执行结果。
       }
@@ -197,12 +215,38 @@ export class AgentServerFacade implements AgentProtocolService {
     return this.backend.createSession(input.title);
   }
 
-  listSessions(): Promise<Session[]> {
-    return this.backend.listSessions();
+  async listSessions(_input?: ListSessionsInput): Promise<ListSessionsResult> {
+    return { items: await this.backend.listSessions(), nextCursor: null };
   }
 
   getSessionSnapshot(sessionId: Id): Promise<SessionSnapshot> {
     return this.backend.getSnapshot(sessionId);
+  }
+
+  async updateSession(input: UpdateSessionInput): Promise<Session> {
+    if (input.title === undefined && input.status === undefined) {
+      throw new BeecodeError(ErrorCodes.INVALID_REQUEST, "At least one session field must be updated");
+    }
+    const snapshot = await this.backend.getSnapshot(input.sessionId);
+    if (snapshot.session.version !== input.expectedVersion) {
+      throw new BeecodeError(ErrorCodes.SESSION_VERSION_CONFLICT, "Session version conflict; reload the session");
+    }
+    const title = input.title?.trim();
+    if (title !== undefined && title.length === 0) {
+      throw new BeecodeError(ErrorCodes.INVALID_REQUEST, "Session title must not be empty");
+    }
+    const updated = await this.persist(
+      {
+        ...snapshot,
+        session: {
+          ...snapshot.session,
+          ...(title !== undefined ? { title } : {}),
+          ...(input.status !== undefined ? { status: input.status } : {}),
+        },
+      },
+      input.expectedVersion,
+    );
+    return updated.session;
   }
 
   subscribe(sessionId: Id, handler: EventHandler): () => void {
@@ -225,10 +269,27 @@ export class AgentServerFacade implements AgentProtocolService {
   }
 
   async getCapabilities(): Promise<Capability> {
+    const unavailableReason: CapabilityUnavailableReason =
+      this.surface === "web" ? "surface_policy" : "runtime_missing";
+    const unavailable = { available: false as const, reason: unavailableReason };
     return {
-      tools: this.tools.schemasFor(this.surface).map((s) => s.name),
-      surfaces: [this.surface],
-      maxTurnSteps: this.limits.maxSteps,
+      surface: this.surface,
+      runtimeLocation: this.surface === "web" ? "backend" : "local",
+      tools: this.tools.schemasFor(this.surface).map((schema) => ({
+        name: schema.name,
+        description: schema.description,
+        available: true,
+      })),
+      features: {
+        localWorkspace: unavailable,
+        shell: unavailable,
+        git: unavailable,
+        attachments: unavailable,
+      },
+      limits: {
+        maxTurnSteps: this.limits.maxSteps,
+        maxInputBytes: DEFAULT_MAX_INPUT_BYTES,
+      },
     };
   }
 
@@ -242,7 +303,7 @@ export class AgentServerFacade implements AgentProtocolService {
       throw new BeecodeError(ErrorCodes.INVALID_REQUEST, "Message text must not be empty");
     }
     if (this.activeSubmissions.has(input.sessionId)) {
-      throw new BeecodeError(ErrorCodes.INVALID_REQUEST, "Session already has an active turn");
+      throw new BeecodeError(ErrorCodes.TURN_ALREADY_ACTIVE, "Session already has an active turn");
     }
     this.activeSubmissions.add(input.sessionId);
 
@@ -276,7 +337,7 @@ export class AgentServerFacade implements AgentProtocolService {
 
       // 2. Runtime history 只包含先前消息；当前 userText 由 Runtime 追加一次。
       const builder = new TurnMessageBuilder(input.sessionId, turn.id, this.now);
-      const unsubscribe = this.subscribe(input.sessionId, (event) => builder.apply(event));
+      const unsubscribe = this.subscribe(input.sessionId, (envelope) => builder.apply(envelope.event));
       let result;
       try {
         result = await this.runtime.runTurn({

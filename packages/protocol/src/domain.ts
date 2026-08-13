@@ -1,21 +1,15 @@
-/**
- * 领域对象：第一阶段最小集合。
- * 见 docs/development/phase-1-cli-development-design.md 第 7 节。
- */
+/** 产品协议的跨端领域对象。 */
 
 export type Id = string;
 
-/**
- * 产品端标识。第一阶段只有 cli；后续扩展 desktop/web/android/ios 时
- * 只允许在这里扩展，后端按 surface 做数据隔离。
- */
-export type Surface = "cli";
+export const SURFACES = ["cli", "web", "desktop", "android", "ios"] as const;
+export type Surface = (typeof SURFACES)[number];
 
 export type SessionStatus = "active" | "archived";
 
 export interface Session {
   id: Id;
-  /** 固定为 "cli"，后端拒绝客户端覆盖为其他 Surface */
+  /** 由服务端路由和策略决定，不能信任客户端覆盖。 */
   surface: Surface;
   accountId: Id;
   title: string;
@@ -35,6 +29,14 @@ export interface SessionSnapshot {
   messages: Message[];
   /** Turn 终态随 Session 一起持久化；在线事件不承担恢复职责。 */
   turns: Turn[];
+  /** 活动 Runtime 投影；不存在时表示当前只有持久快照。 */
+  live?: SessionLiveState;
+}
+
+export interface SessionLiveState {
+  /** 当前 Runtime 实例内、当前 Session 的单调递增序号。 */
+  sequence: number;
+  activeTurnId?: Id;
 }
 
 export type TurnStatus =
@@ -115,11 +117,62 @@ export interface ToolResult {
   error?: BeecodeErrorShape;
 }
 
-/** Runtime 对外声明的安全能力 */
-export interface Capability {
-  tools: string[];
-  surfaces: Surface[];
-  maxTurnSteps: number;
+export type RuntimeLocation = "local" | "backend";
+
+export type CapabilityUnavailableReason =
+  | "surface_policy"
+  | "runtime_missing"
+  | "not_configured"
+  | "not_authorized";
+
+export interface CapabilityState {
+  available: boolean;
+  reason?: CapabilityUnavailableReason;
+}
+
+export interface ToolCapability extends CapabilityState {
+  name: string;
+  description: string;
+}
+
+export interface CapabilityFeatures {
+  localWorkspace: CapabilityState;
+  shell: CapabilityState;
+  git: CapabilityState;
+  attachments: CapabilityState;
+}
+
+/** Runtime 对当前 surface 声明的安全能力。 */
+export interface CapabilitySet {
+  surface: Surface;
+  runtimeLocation: RuntimeLocation;
+  tools: ToolCapability[];
+  features: CapabilityFeatures;
+  limits: {
+    maxTurnSteps: number;
+    maxInputBytes: number;
+  };
+}
+
+/** @deprecated 使用 CapabilitySet；保留别名以便第一阶段调用方渐进迁移。 */
+export type Capability = CapabilitySet;
+
+export interface Page<TItem> {
+  items: TItem[];
+  /** 不透明游标；客户端不得解析内部字段。 */
+  nextCursor: string | null;
+}
+
+export interface AccountSummary {
+  accountId: Id;
+  createdAt: string;
+}
+
+export interface QuotaSnapshot {
+  accountId: Id;
+  quotaLimitTokens: number;
+  quotaUsedTokens: number;
+  quotaReservedTokens: number;
 }
 
 /** 标准化用量；供应商私有字段不允许出现在这里 */

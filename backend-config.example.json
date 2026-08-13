@@ -1,6 +1,14 @@
 {
-  "provider": "openai",
-  "openaiApiKey": "your-deepseek-api-key",
-  "openaiModel": "deepseek-v4-flash",
-  "openaiBaseUrl": "https://api.deepseek.com/v1"
+  "provider": "fake",
+  "webOrigin": "http://127.0.0.1:5173",
+  "publicBaseUrl": "http://127.0.0.1:8787",
+  "iosOAuthRedirectUri": "ai.beecode.ios://oauth/callback",
+  "cookieSecure": false,
+  "devAuthEnabled": true,
+  "browserSessionTtlSeconds": 2592000,
+  "accessTokenTtlSeconds": 900,
+  "refreshTokenTtlSeconds": 2592000,
+  "authorizationCodeTtlSeconds": 300,
+  "maxConcurrentWebTurnsPerAccount": 4,
+  "maxConcurrentIOSTurnsPerAccount": 4
 }

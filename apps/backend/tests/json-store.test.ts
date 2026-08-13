@@ -44,4 +44,33 @@ describe("JsonFileBackendStore", () => {
     await expect(store.load()).rejects.toThrow(/Unable to load Beecode backend data/);
     expect(await readFile(path, "utf8")).toBe("{broken");
   });
+
+  it("migrates legacy plaintext account tokens to hashes on the next flush", async () => {
+    const path = await dataPath();
+    await writeFile(path, JSON.stringify({
+      accounts: [{
+        accountId: "acct_legacy",
+        token: "legacy-secret-token",
+        quotaLimitTokens: 1_000,
+        quotaUsedTokens: 0,
+        createdAt: "2026-08-10T00:00:00.000Z",
+      }],
+      sessions: [],
+    }), "utf8");
+
+    const store = new JsonFileBackendStore(path);
+    await store.load();
+    expect(store.findAccountByToken("legacy-secret-token")?.accountId).toBe("acct_legacy");
+    await store.flush();
+
+    const persisted = JSON.parse(await readFile(path, "utf8")) as {
+      accounts: Array<Record<string, unknown>>;
+      accessTokens: Array<Record<string, unknown>>;
+      usageLedger: unknown[];
+    };
+    expect(persisted.accounts[0]?.token).toBeUndefined();
+    expect(persisted.accessTokens[0]?.tokenHash).toEqual(expect.any(String));
+    expect(JSON.stringify(persisted)).not.toContain("legacy-secret-token");
+    expect(persisted.usageLedger).toEqual([]);
+  });
 });

@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { parseModelRequest, parseModelStreamEvent, parseSessionSnapshot } from "../src/validation.js";
+import {
+  SubmitTurnRequestSchema,
+  parseAgentEventEnvelope,
+  parseCapabilitySet,
+  parseModelRequest,
+  parseModelStreamEvent,
+  parseSession,
+  parseSessionSnapshot,
+  phase2OpenApiDocument,
+} from "../src/index.js";
 
 const now = "2026-08-06T00:00:00.000Z";
 
@@ -34,7 +43,7 @@ describe("protocol validation", () => {
 
   it("rejects malformed model events before they enter Agent Core", () => {
     expect(() => parseModelStreamEvent({ type: "finish", reason: "unknown" })).toThrow(
-      /reason is invalid/,
+      /modelEvent\.reason/,
     );
     expect(() => parseModelStreamEvent({ type: "usage", usage: { totalTokens: -1 } })).toThrow();
   });
@@ -47,6 +56,108 @@ describe("protocol validation", () => {
         maxOutputTokens: 128,
       }).maxOutputTokens,
     ).toBe(128);
-    expect(() => parseModelRequest({ messages: [{ role: "root" }], tools: [] })).toThrow(/role is invalid/);
+    expect(() => parseModelRequest({ messages: [{ role: "root" }], tools: [] })).toThrow(
+      /modelRequest\.messages\.0\.role/,
+    );
+  });
+
+  it("accepts every product surface and rejects unknown surfaces", () => {
+    for (const surface of ["cli", "web", "desktop", "android", "ios"] as const) {
+      expect(
+        parseSession({
+          id: `ses_${surface}`,
+          surface,
+          accountId: "acct_1",
+          title: surface,
+          status: "active",
+          version: 1,
+          createdAt: now,
+          updatedAt: now,
+        }).surface,
+      ).toBe(surface);
+    }
+
+    expect(() =>
+      parseSession({
+        id: "ses_unknown",
+        surface: "watch",
+        accountId: "acct_1",
+        title: "unknown",
+        status: "active",
+        version: 1,
+        createdAt: now,
+        updatedAt: now,
+      }),
+    ).toThrow(/surface/);
+  });
+
+  it("validates capability explanations and event envelope ownership", () => {
+    expect(
+      parseCapabilitySet({
+        surface: "web",
+        runtimeLocation: "backend",
+        tools: [{ name: "calculator", description: "Calculate", available: true }],
+        features: {
+          localWorkspace: { available: false, reason: "surface_policy" },
+          shell: { available: false, reason: "surface_policy" },
+          git: { available: false, reason: "surface_policy" },
+          attachments: { available: false, reason: "surface_policy" },
+        },
+        limits: { maxTurnSteps: 8, maxInputBytes: 1024 },
+      }).runtimeLocation,
+    ).toBe("backend");
+
+    expect(() =>
+      parseCapabilitySet({
+        surface: "web",
+        runtimeLocation: "backend",
+        tools: [],
+        features: {
+          localWorkspace: { available: false },
+          shell: { available: false, reason: "surface_policy" },
+          git: { available: false, reason: "surface_policy" },
+          attachments: { available: false, reason: "surface_policy" },
+        },
+        limits: { maxTurnSteps: 8, maxInputBytes: 1024 },
+      }),
+    ).toThrow(/require a reason/);
+
+    expect(() =>
+      parseAgentEventEnvelope({
+        eventId: "evt_1",
+        sessionId: "ses_1",
+        turnId: "turn_1",
+        sequence: 1,
+        occurredAt: now,
+        event: { type: "turn.cancelled", sessionId: "ses_other", turnId: "turn_1" },
+      }),
+    ).toThrow(/sessionId must match/);
+  });
+
+  it("publishes an OpenAPI 3.1 contract with unique stable operationIds", () => {
+    const operationIds: string[] = [];
+    for (const pathItem of Object.values(phase2OpenApiDocument.paths)) {
+      for (const [method, operation] of Object.entries(pathItem)) {
+        if (method === "parameters" || typeof operation !== "object" || operation === null) continue;
+        if ("operationId" in operation && typeof operation.operationId === "string") {
+          operationIds.push(operation.operationId);
+        }
+      }
+    }
+
+    expect(phase2OpenApiDocument.openapi).toBe("3.1.0");
+    expect(operationIds.length).toBeGreaterThan(10);
+    expect(new Set(operationIds).size).toBe(operationIds.length);
+    expect(phase2OpenApiDocument.components.schemas.AgentEventEnvelope).toBeDefined();
+    expect(JSON.stringify(phase2OpenApiDocument.components.schemas)).not.toContain("#/$defs/");
+    expect(phase2OpenApiDocument.paths["/v1/ios/sessions"].get.operationId).toBe(
+      "listIOSSessions",
+    );
+    expect(phase2OpenApiDocument.paths["/v1/ios/sessions"].get.security).toEqual([
+      { bearerAuth: [] },
+    ]);
+    expect(
+      SubmitTurnRequestSchema.safeParse({ text: "计算 1+1", idempotencyKey: "request-0001" }).success,
+    ).toBe(true);
   });
 });

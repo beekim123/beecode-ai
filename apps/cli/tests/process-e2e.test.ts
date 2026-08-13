@@ -37,7 +37,7 @@ describe("CLI process", () => {
     };
 
     try {
-      const login = startCli(["login"], env);
+      const login = startCli(["login", "--dev"], env);
       const loginExit = await login.waitForExit();
       expect(loginExit.code, login.stderr).toBe(0);
       expect(login.stdout).toContain("Logged in");

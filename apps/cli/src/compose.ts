@@ -26,6 +26,7 @@ export interface ComposeOptions {
   /** 测试注入：Fake Gateway 与内存后端 */
   gateway?: ModelGateway;
   backend?: BackendSessionStore;
+  fetchImpl?: typeof fetch;
 }
 
 /**
@@ -39,10 +40,18 @@ export function composeCli(options: ComposeOptions): ComposedCli {
   // 测试传了假后端或假模型就直接用；否则根据配置连接真实服务。
   const backend =
     options.backend ??
-    new HttpBackendClient({ baseUrl: options.config.backendUrl, token: options.config.token });
+    new HttpBackendClient({
+      baseUrl: options.config.backendUrl,
+      token: options.config.token,
+      fetchImpl: options.fetchImpl,
+    });
   const gateway =
     options.gateway ??
-    new HttpModelGateway({ baseUrl: options.config.backendUrl, token: options.config.token });
+    new HttpModelGateway({
+      baseUrl: options.config.backendUrl,
+      token: options.config.token,
+      fetchImpl: options.fetchImpl,
+    });
 
   // Facade 接收 client 的请求，交给 Runtime 处理，再把结果返回给 client。
   const runtime = new AgentRuntime({ gateway, tools, surface: "cli" });

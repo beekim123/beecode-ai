@@ -13,5 +13,38 @@ backend-data.json.tmp
 # 构建与测试产物
 **/dist/
 coverage/
+**/playwright-report/
+**/test-results/
 *.tsbuildinfo
 .DS_Store
+
+# Xcode user state and local build output
+**/*.xcodeproj/xcuserdata/
+**/*.xcworkspace/xcuserdata/
+**/DerivedData/
+**/.build/
+*.xcuserstate
+
+# Unmodified third-party skills are reproducible installation artifacts.
+.agents/skills/design-taste-frontend/
+.agents/skills/find-skills/
+.agents/skills/hono/
+.agents/skills/ios-networking/
+.agents/skills/playwright-best-practices/
+.agents/skills/swift-concurrency/
+.agents/skills/swift-testing-pro/
+.agents/skills/swiftui-expert-skill/
+.agents/skills/ux-audit/
+.agents/skills/vercel-react-best-practices/
+.agents/skills/web-design-guidelines/
+.claude/skills/design-taste-frontend
+.claude/skills/find-skills
+.claude/skills/hono
+.claude/skills/ios-networking
+.claude/skills/playwright-best-practices
+.claude/skills/swift-concurrency
+.claude/skills/swift-testing-pro
+.claude/skills/swiftui-expert-skill
+.claude/skills/ux-audit
+.claude/skills/vercel-react-best-practices
+.claude/skills/web-design-guidelines

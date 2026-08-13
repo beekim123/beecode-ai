@@ -2,10 +2,11 @@
 
 ## 1. 当前范围
 
-第一阶段包含两个运行单元：
+当前实现包含三个运行单元：
 
 - 本地 CLI：行式交互、Agent Runtime、Agent Loop 和 `calculator` 工具。
-- Beecode Backend：开发身份、CLI Session、额度和 Model Gateway。
+- Beecode Backend：统一账号、CLI/Web Session、Web Runtime、额度和 Model Gateway。
+- Web：浏览器登录、Session 工作台、SSE 状态与后端 Agent Runtime。
 
 CLI 不持有模型供应商密钥。真实模型密钥只配置在 Backend。当前不包含 Shell、文件、Git、MCP、WebSocket 或多代理工具。
 
@@ -33,13 +34,19 @@ pnpm backend
 
 默认监听 `http://127.0.0.1:8787`，数据保存到 `~/.beecode/backend-data.json`。
 
-在第二个终端登录：
+在第二个终端执行浏览器授权登录：
 
 ```bash
 pnpm --filter @beecode/cli start login
 ```
 
-登录信息保存到 `~/.beecode/config.json`。配置目录权限为 `0700`，文件权限为 `0600`。
+CLI 会启动随机端口的 `127.0.0.1` loopback callback，并使用 Authorization Code + PKCE。登录信息通过 Credential Store 抽象保存；当前安全回退为 `~/.beecode/config.json`，配置目录权限为 `0700`，文件权限为 `0600`。
+
+自动化测试和迁移场景可显式使用开发登录；它会创建独立开发账号，不等价于 Web 账号：
+
+```bash
+pnpm --filter @beecode/cli start login --dev
+```
 
 进入交互模式：
 
@@ -153,7 +160,7 @@ pnpm test:smoke
 
 ### Backend 配置文件
 
-Backend 启动时读取 JSON 配置文件，路径按以下顺序解析：`BEECODE_BACKEND_CONFIG` 环境变量 > 项目根目录的 `backend-config.json`（从启动目录向上查找 `pnpm-workspace.yaml` 定位项目根，该文件已加入 `.gitignore`）> `~/.beecode/backend-config.json`。文件不存在时按空配置处理。可先用 `cp backend-config.example.json backend-config.json` 创建本地配置；示例使用 DeepSeek 的 OpenAI 兼容接口，需将 API Key 占位符替换为自己的密钥。支持的键与 `BackendConfig` 字段同名：`host`、`port`、`quotaLimitTokens`、`provider`、`devLoginSecret`、`anthropicApiKey`、`anthropicModel`、`openaiApiKey`、`openaiModel`、`openaiBaseUrl`、`dataFile`。文件包含未知键、非法 JSON 或类型错误时 Backend 拒绝启动。
+Backend 启动时读取 JSON 配置文件，路径按以下顺序解析：`BEECODE_BACKEND_CONFIG` 环境变量 > 项目根目录的 `backend-config.json`（从启动目录向上查找 `pnpm-workspace.yaml` 定位项目根，该文件已加入 `.gitignore`）> `~/.beecode/backend-config.json`。文件不存在时按空配置处理。可先用 `cp backend-config.example.json backend-config.json` 创建本地配置。支持的键与 `BackendConfig` 字段同名，包括监听、Provider、Web Origin、Cookie、认证有效期与数据文件配置。完整 Web 认证字段见 [Web 使用文档](./web.md)。文件包含未知键、非法 JSON 或类型错误时 Backend 拒绝启动。
 
 环境变量优先于配置文件；未设置环境变量时使用文件值；两者都没有时使用下表默认值。
 
@@ -172,7 +179,10 @@ Backend 启动时读取 JSON 配置文件，路径按以下顺序解析：`BEECO
 | `OPENAI_API_KEY`             | 无                                 | OpenAI 兼容 Provider 必填             |
 | `OPENAI_MODEL`               | 无                                 | OpenAI 兼容 Provider 必填             |
 | `OPENAI_BASE_URL`            | `https://api.openai.com/v1`      | OpenAI 兼容接口地址                   |
-| `BEECODE_DEV_LOGIN_SECRET`   | 无                                 | 非 loopback 监听时必填                |
+| `BEECODE_DEV_LOGIN_SECRET`   | 无                                 | 非 loopback 且启用开发认证时必填      |
+| `BEECODE_WEB_ORIGIN`         | `http://127.0.0.1:5173`           | Web 写请求允许的精确 Origin           |
+| `BEECODE_PUBLIC_BASE_URL`    | Backend 监听 URL                    | 浏览器和 OAuth 可访问的 Backend URL   |
+| `BEECODE_DEV_AUTH_ENABLED`   | loopback 时为 `true`               | 开发身份与 dev-token 开关             |
 
 ### CLI 环境变量
 
@@ -192,6 +202,7 @@ Backend：
 
 ```bash
 BEECODE_BACKEND_HOST=0.0.0.0 \
+BEECODE_DEV_AUTH_ENABLED=true \
 BEECODE_DEV_LOGIN_SECRET=a-long-random-secret \
 pnpm backend
 ```
@@ -201,10 +212,10 @@ pnpm backend
 ```bash
 BEECODE_BACKEND_URL=http://backend-host:8787 \
 BEECODE_DEV_LOGIN_SECRET=a-long-random-secret \
-pnpm --filter @beecode/cli start login
+pnpm --filter @beecode/cli start login --dev
 ```
 
-开发登录每次会创建新账号。若要让第二台 CLI 查看同一账号历史，需要通过安全通道部署同一份 CLI `token` 和 `accountId` 配置，并保持 `0600` 权限。
+`beecode login` 会要求浏览器中已有或建立 Web 登录，然后向当前稳定 Account 授权。不要跨设备复制 Access Token 或 Refresh Token；每台 CLI 应分别完成授权。
 
 Backend 当前没有内置 TLS。不要把端口直接暴露到公网；跨不可信网络时应在前面部署 TLS 反向代理和正式身份系统。
 
@@ -212,7 +223,7 @@ Backend 当前没有内置 TLS。不要把端口直接暴露到公网；跨不�
 
 - Session、Message、Turn 终态和额度由 Backend 保存。
 - 每个 Session 同时只允许一个活动 Turn。
-- CLI 重启后读取完整快照，不重放旧在线事件。
+- CLI 重启后读取完整快照，不重放旧在线事件；Web 使用 SSE 加权威快照恢复。
 - completed、failed 和 cancelled Turn 都会持久化。
 - Session 使用乐观版本号；发生 `SESSION_VERSION_CONFLICT` 时不会自动合并或覆盖远端历史。
 - Backend 数据文件损坏或无法读取时会拒绝启动，不会自动覆盖为空数据。
@@ -237,7 +248,7 @@ pnpm test
 pnpm check
 ```
 
-自动化测试覆盖协议校验、Agent Loop、Tool 超时/取消、Facade 持久化顺序、账号和 Surface 隔离、额度预留、JSON Store、CLI 配置权限、进程内 E2E 和真实 CLI 子进程入口。默认测试不访问外部模型。
+自动化测试覆盖协议校验、Agent Loop、Tool 超时/取消、Facade 持久化顺序、OAuth/PKCE、Refresh Token 轮换、账号和 Surface 隔离、额度预留、JSON Store、Web Runtime、CLI 配置权限、进程内 E2E 和真实 CLI 子进程入口。默认测试不访问外部模型。
 
 ## 11. 常见问题
 

@@ -1,0 +1,520 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A00000000000000000000001 /* BeecodeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000001 /* BeecodeApp.swift */; };
+		A00000000000000000000002 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000002 /* RootView.swift */; };
+		A00000000000000000000003 /* AppMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000003 /* AppMetadata.swift */; };
+		A00000000000000000000004 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000004 /* Localizable.xcstrings */; };
+		A00000000000000000000005 /* AppMetadataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000005 /* AppMetadataTests.swift */; };
+		A00000000000000000000006 /* BeecodeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000006 /* BeecodeUITests.swift */; };
+		A00000000000000000000007 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000000D /* AppConfiguration.swift */; };
+		A00000000000000000000008 /* OAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000000E /* OAuth.swift */; };
+		A00000000000000000000009 /* HTTPTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000000F /* HTTPTransport.swift */; };
+		A0000000000000000000000A /* BeecodeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000010 /* BeecodeClient.swift */; };
+		A0000000000000000000000B /* TransportModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000011 /* TransportModels.swift */; };
+		A0000000000000000000000C /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000012 /* AppStore.swift */; };
+		A0000000000000000000000D /* PKCETests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000013 /* PKCETests.swift */; };
+		A0000000000000000000000E /* TokenVaultTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000014 /* TokenVaultTests.swift */; };
+		A0000000000000000000000F /* BeecodeClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000015 /* BeecodeClientTests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		H00000000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D00000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C00000000000000000000001;
+			remoteInfo = Beecode;
+		};
+		H00000000000000000000002 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D00000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C00000000000000000000001;
+			remoteInfo = Beecode;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		B00000000000000000000001 /* BeecodeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BeecodeApp.swift; sourceTree = "<group>"; };
+		B00000000000000000000002 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		B00000000000000000000003 /* AppMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppMetadata.swift; sourceTree = "<group>"; };
+		B00000000000000000000004 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		B00000000000000000000005 /* AppMetadataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppMetadataTests.swift; sourceTree = "<group>"; };
+		B00000000000000000000006 /* BeecodeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BeecodeUITests.swift; sourceTree = "<group>"; };
+		B00000000000000000000007 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
+		B00000000000000000000008 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		B00000000000000000000009 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
+		B0000000000000000000000A /* Beecode.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Beecode.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B0000000000000000000000B /* BeecodeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BeecodeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B0000000000000000000000C /* BeecodeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BeecodeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B0000000000000000000000D /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfiguration.swift; sourceTree = "<group>"; };
+		B0000000000000000000000E /* OAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OAuth.swift; sourceTree = "<group>"; };
+		B0000000000000000000000F /* HTTPTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTTPTransport.swift; sourceTree = "<group>"; };
+		B00000000000000000000010 /* BeecodeClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BeecodeClient.swift; sourceTree = "<group>"; };
+		B00000000000000000000011 /* TransportModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransportModels.swift; sourceTree = "<group>"; };
+		B00000000000000000000012 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore.swift; sourceTree = "<group>"; };
+		B00000000000000000000013 /* PKCETests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PKCETests.swift; sourceTree = "<group>"; };
+		B00000000000000000000014 /* TokenVaultTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenVaultTests.swift; sourceTree = "<group>"; };
+		B00000000000000000000015 /* BeecodeClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BeecodeClientTests.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		F00000000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F00000000000000000000004 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F00000000000000000000006 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		E00000000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				E00000000000000000000002 /* Config */,
+				E00000000000000000000003 /* Sources */,
+				E00000000000000000000006 /* Resources */,
+				E00000000000000000000007 /* tests */,
+				E0000000000000000000000A /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		E00000000000000000000002 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				B00000000000000000000007 /* Base.xcconfig */,
+				B00000000000000000000008 /* Debug.xcconfig */,
+				B00000000000000000000009 /* Release.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		E00000000000000000000003 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				E00000000000000000000004 /* App */,
+				E00000000000000000000005 /* Core */,
+				E0000000000000000000000B /* Auth */,
+				E0000000000000000000000C /* Networking */,
+				E0000000000000000000000D /* Generated */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		E00000000000000000000004 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				B00000000000000000000001 /* BeecodeApp.swift */,
+				B00000000000000000000002 /* RootView.swift */,
+				B00000000000000000000012 /* AppStore.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		E00000000000000000000005 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				B00000000000000000000003 /* AppMetadata.swift */,
+				B0000000000000000000000D /* AppConfiguration.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		E00000000000000000000006 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				B00000000000000000000004 /* Localizable.xcstrings */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		E00000000000000000000007 /* tests */ = {
+			isa = PBXGroup;
+			children = (
+				E00000000000000000000008 /* Unit */,
+				E0000000000000000000000E /* Integration */,
+				E00000000000000000000009 /* UI */,
+			);
+			path = tests;
+			sourceTree = "<group>";
+		};
+		E00000000000000000000008 /* Unit */ = {
+			isa = PBXGroup;
+			children = (
+				B00000000000000000000005 /* AppMetadataTests.swift */,
+				B00000000000000000000013 /* PKCETests.swift */,
+				B00000000000000000000014 /* TokenVaultTests.swift */,
+			);
+			path = Unit;
+			sourceTree = "<group>";
+		};
+		E00000000000000000000009 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				B00000000000000000000006 /* BeecodeUITests.swift */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		E0000000000000000000000A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B0000000000000000000000A /* Beecode.app */,
+				B0000000000000000000000B /* BeecodeTests.xctest */,
+				B0000000000000000000000C /* BeecodeUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		E0000000000000000000000B /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				B0000000000000000000000E /* OAuth.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		E0000000000000000000000C /* Networking */ = {
+			isa = PBXGroup;
+			children = (
+				B0000000000000000000000F /* HTTPTransport.swift */,
+				B00000000000000000000010 /* BeecodeClient.swift */,
+				B00000000000000000000011 /* TransportModels.swift */,
+			);
+			path = Networking;
+			sourceTree = "<group>";
+		};
+		E0000000000000000000000D /* Generated */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Generated;
+			sourceTree = "<group>";
+		};
+		E0000000000000000000000E /* Integration */ = {
+			isa = PBXGroup;
+			children = (
+				B00000000000000000000015 /* BeecodeClientTests.swift */,
+			);
+			path = Integration;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		C00000000000000000000001 /* Beecode */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = G00000000000000000000002 /* Build configuration list for PBXNativeTarget "Beecode" */;
+			buildPhases = (
+				F00000000000000000000002 /* Sources */,
+				F00000000000000000000001 /* Frameworks */,
+				F00000000000000000000003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Beecode;
+			productName = Beecode;
+			productReference = B0000000000000000000000A /* Beecode.app */;
+			productType = "com.apple.product-type.application";
+		};
+		C00000000000000000000002 /* BeecodeTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = G00000000000000000000003 /* Build configuration list for PBXNativeTarget "BeecodeTests" */;
+			buildPhases = (
+				F00000000000000000000005 /* Sources */,
+				F00000000000000000000004 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				H00000000000000000000003 /* PBXTargetDependency */,
+			);
+			name = BeecodeTests;
+			productName = BeecodeTests;
+			productReference = B0000000000000000000000B /* BeecodeTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		C00000000000000000000003 /* BeecodeUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = G00000000000000000000004 /* Build configuration list for PBXNativeTarget "BeecodeUITests" */;
+			buildPhases = (
+				F00000000000000000000007 /* Sources */,
+				F00000000000000000000006 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				H00000000000000000000004 /* PBXTargetDependency */,
+			);
+			name = BeecodeUITests;
+			productName = BeecodeUITests;
+			productReference = B0000000000000000000000C /* BeecodeUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		D00000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					C00000000000000000000001 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+					C00000000000000000000002 = {
+						CreatedOnToolsVersion = 26.0;
+						TestTargetID = C00000000000000000000001;
+					};
+					C00000000000000000000003 = {
+						CreatedOnToolsVersion = 26.0;
+						TestTargetID = C00000000000000000000001;
+					};
+				};
+			};
+			buildConfigurationList = G00000000000000000000001 /* Build configuration list for PBXProject "Beecode" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+				"zh-Hans",
+			);
+			mainGroup = E00000000000000000000001;
+			productRefGroup = E0000000000000000000000A /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				C00000000000000000000001 /* Beecode */,
+				C00000000000000000000002 /* BeecodeTests */,
+				C00000000000000000000003 /* BeecodeUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		F00000000000000000000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A00000000000000000000004 /* Localizable.xcstrings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		F00000000000000000000002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A00000000000000000000001 /* BeecodeApp.swift in Sources */,
+				A00000000000000000000002 /* RootView.swift in Sources */,
+				A00000000000000000000003 /* AppMetadata.swift in Sources */,
+				A00000000000000000000007 /* AppConfiguration.swift in Sources */,
+				A00000000000000000000008 /* OAuth.swift in Sources */,
+				A00000000000000000000009 /* HTTPTransport.swift in Sources */,
+				A0000000000000000000000A /* BeecodeClient.swift in Sources */,
+				A0000000000000000000000B /* TransportModels.swift in Sources */,
+				A0000000000000000000000C /* AppStore.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F00000000000000000000005 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A00000000000000000000005 /* AppMetadataTests.swift in Sources */,
+				A0000000000000000000000D /* PKCETests.swift in Sources */,
+				A0000000000000000000000E /* TokenVaultTests.swift in Sources */,
+				A0000000000000000000000F /* BeecodeClientTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F00000000000000000000007 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A00000000000000000000006 /* BeecodeUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		H00000000000000000000003 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C00000000000000000000001 /* Beecode */;
+			targetProxy = H00000000000000000000001 /* PBXContainerItemProxy */;
+		};
+		H00000000000000000000004 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C00000000000000000000001 /* Beecode */;
+			targetProxy = H00000000000000000000002 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		I00000000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+			};
+			name = Debug;
+		};
+		I00000000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		I00000000000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = B00000000000000000000008 /* Debug.xcconfig */;
+			buildSettings = {
+				DEVELOPMENT_TEAM = 9TG22MZSMB;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		I00000000000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = B00000000000000000000009 /* Release.xcconfig */;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		I00000000000000000000005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = B00000000000000000000008 /* Debug.xcconfig */;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				PRODUCT_BUNDLE_IDENTIFIER = ai.beecode.ios.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Beecode.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Beecode";
+			};
+			name = Debug;
+		};
+		I00000000000000000000006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = B00000000000000000000009 /* Release.xcconfig */;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				PRODUCT_BUNDLE_IDENTIFIER = ai.beecode.ios.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Beecode.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Beecode";
+			};
+			name = Release;
+		};
+		I00000000000000000000007 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = B00000000000000000000008 /* Debug.xcconfig */;
+			buildSettings = {
+				PRODUCT_BUNDLE_IDENTIFIER = ai.beecode.ios.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_TARGET_NAME = Beecode;
+			};
+			name = Debug;
+		};
+		I00000000000000000000008 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = B00000000000000000000009 /* Release.xcconfig */;
+			buildSettings = {
+				PRODUCT_BUNDLE_IDENTIFIER = ai.beecode.ios.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_TARGET_NAME = Beecode;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		G00000000000000000000001 /* Build configuration list for PBXProject "Beecode" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				I00000000000000000000001 /* Debug */,
+				I00000000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		G00000000000000000000002 /* Build configuration list for PBXNativeTarget "Beecode" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				I00000000000000000000003 /* Debug */,
+				I00000000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		G00000000000000000000003 /* Build configuration list for PBXNativeTarget "BeecodeTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				I00000000000000000000005 /* Debug */,
+				I00000000000000000000006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		G00000000000000000000004 /* Build configuration list for PBXNativeTarget "BeecodeUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				I00000000000000000000007 /* Debug */,
+				I00000000000000000000008 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = D00000000000000000000001 /* Project object */;
+}

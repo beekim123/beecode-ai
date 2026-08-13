@@ -1,0 +1,8 @@
+#include "Base.xcconfig"
+
+SWIFT_COMPILATION_MODE = wholemodule
+VALIDATE_PRODUCT = YES
+INFOPLIST_FILE = Config/Release-Info.plist
+
+# Keep this empty until the production API allowlist is approved.
+BEECODE_API_BASE_URL =

@@ -145,7 +145,7 @@ describe("AgentServerFacade", () => {
       resolveStarted = resolve;
     });
     facade.subscribe("ses_test", (event) => {
-      if (event.type === "turn.started") {
+      if (event.event.type === "turn.started") {
         startedTurnId = event.turnId;
         resolveStarted?.();
       }

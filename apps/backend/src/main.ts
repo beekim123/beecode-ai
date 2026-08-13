@@ -12,7 +12,9 @@ async function main(): Promise<void> {
   await store.load();
   const provider = createProvider(config);
 
-  const server = createBackendServer(store, provider, config);
+  const server = createBackendServer(store, provider, config, {
+    log: (record) => console.info(`[beecode-backend] ${JSON.stringify(record)}`),
+  });
   server.listen(config.port, config.host, () => {
     console.log(`[beecode-backend] listening on http://${config.host}:${config.port} (provider: ${provider.name})`);
   });

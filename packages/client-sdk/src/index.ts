@@ -1,13 +1,17 @@
 import type {
   AgentEvent,
+  AgentEventEnvelope,
   AgentProtocolService,
   Capability,
   CreateSessionInput,
   Id,
+  ListSessionsInput,
+  ListSessionsResult,
   Session,
   SessionSnapshot,
   SubmitMessageInput,
   SubmitMessageResult,
+  UpdateSessionInput,
 } from "@beecode/protocol";
 
 /**
@@ -24,11 +28,14 @@ export class InProcessTransport implements Transport {
   createSession(input: CreateSessionInput): Promise<Session> {
     return this.service.createSession(input);
   }
-  listSessions(): Promise<Session[]> {
-    return this.service.listSessions();
+  listSessions(input?: ListSessionsInput): Promise<ListSessionsResult> {
+    return this.service.listSessions(input);
   }
   getSessionSnapshot(sessionId: Id): Promise<SessionSnapshot> {
     return this.service.getSessionSnapshot(sessionId);
+  }
+  updateSession(input: UpdateSessionInput): Promise<Session> {
+    return this.service.updateSession(input);
   }
   submitMessage(input: SubmitMessageInput): Promise<SubmitMessageResult> {
     return this.service.submitMessage(input);
@@ -36,7 +43,7 @@ export class InProcessTransport implements Transport {
   cancelTurn(sessionId: Id, turnId: Id): Promise<void> {
     return this.service.cancelTurn(sessionId, turnId);
   }
-  subscribe(sessionId: Id, handler: (event: AgentEvent) => void): () => void {
+  subscribe(sessionId: Id, handler: (event: AgentEventEnvelope) => void): () => void {
     return this.service.subscribe(sessionId, handler);
   }
   getCapabilities(): Promise<Capability> {
@@ -55,8 +62,24 @@ export class BeecodeClient {
     return this.transport.createSession({ title });
   }
 
-  listSessions(): Promise<Session[]> {
-    return this.transport.listSessions();
+  listSessionPage(input: ListSessionsInput = {}): Promise<ListSessionsResult> {
+    return this.transport.listSessions(input);
+  }
+
+  async listSessions(): Promise<Session[]> {
+    const sessions: Session[] = [];
+    const seenCursors = new Set<string>();
+    let cursor: string | undefined;
+    do {
+      const page = await this.transport.listSessions(cursor === undefined ? {} : { cursor });
+      sessions.push(...page.items);
+      cursor = page.nextCursor ?? undefined;
+      if (cursor !== undefined && seenCursors.has(cursor)) {
+        throw new Error("Session pagination returned a repeated cursor");
+      }
+      if (cursor !== undefined) seenCursors.add(cursor);
+    } while (cursor !== undefined);
+    return sessions;
   }
 
   /** CLI 重启后调用：拉取完整快照，不回放历史事件 */
@@ -64,8 +87,12 @@ export class BeecodeClient {
     return this.transport.getSessionSnapshot(sessionId);
   }
 
-  submitMessage(sessionId: Id, text: string): Promise<SubmitMessageResult> {
-    return this.transport.submitMessage({ sessionId, text });
+  updateSession(input: UpdateSessionInput): Promise<Session> {
+    return this.transport.updateSession(input);
+  }
+
+  submitMessage(sessionId: Id, text: string, idempotencyKey?: string): Promise<SubmitMessageResult> {
+    return this.transport.submitMessage({ sessionId, text, idempotencyKey });
   }
 
   cancelTurn(sessionId: Id, turnId: Id): Promise<void> {
@@ -73,6 +100,10 @@ export class BeecodeClient {
   }
 
   subscribe(sessionId: Id, handler: (event: AgentEvent) => void): () => void {
+    return this.transport.subscribe(sessionId, (envelope) => handler(envelope.event));
+  }
+
+  subscribeEnvelopes(sessionId: Id, handler: (event: AgentEventEnvelope) => void): () => void {
     return this.transport.subscribe(sessionId, handler);
   }
 
@@ -80,3 +111,5 @@ export class BeecodeClient {
     return this.transport.getCapabilities();
   }
 }
+
+export * from "./http-transport.js";

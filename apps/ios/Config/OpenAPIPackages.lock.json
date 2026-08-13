@@ -1,0 +1,14 @@
+{
+  "checkedAt": "2026-08-13",
+  "packages": {
+    "swift-openapi-generator": {
+      "repository": "https://github.com/apple/swift-openapi-generator.git",
+      "version": "1.13.0"
+    },
+    "swift-openapi-runtime": {
+      "repository": "https://github.com/apple/swift-openapi-runtime.git",
+      "version": "1.12.0"
+    }
+  },
+  "policy": "Use exact versions. Review generated diffs before changing this file."
+}

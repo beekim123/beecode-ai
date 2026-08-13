@@ -1,4 +1,4 @@
-import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -6,8 +6,11 @@ import { join } from "node:path";
 
 export interface CliConfig {
   backendUrl: string;
+  /** Current OAuth access token. The name remains for phase-one config compatibility. */
   token: string;
   accountId: string;
+  refreshToken?: string;
+  accessTokenExpiresAt?: string;
 }
 
 export function beecodeHome(env: NodeJS.ProcessEnv = process.env): string {
@@ -34,10 +37,23 @@ export async function loadConfig(env: NodeJS.ProcessEnv = process.env): Promise<
     }
     const url = new URL(record.backendUrl);
     if (url.protocol !== "http:" && url.protocol !== "https:") return undefined;
-    return { token: record.token, backendUrl: url.toString().replace(/\/$/, ""), accountId: record.accountId };
+    const refreshToken = typeof record.refreshToken === "string" ? record.refreshToken : undefined;
+    const accessTokenExpiresAt =
+      typeof record.accessTokenExpiresAt === "string" ? record.accessTokenExpiresAt : undefined;
+    return {
+      token: record.token,
+      backendUrl: url.toString().replace(/\/$/, ""),
+      accountId: record.accountId,
+      ...(refreshToken ? { refreshToken } : {}),
+      ...(accessTokenExpiresAt ? { accessTokenExpiresAt } : {}),
+    };
   } catch {
     return undefined;
   }
+}
+
+export async function clearConfig(env: NodeJS.ProcessEnv = process.env): Promise<void> {
+  await rm(configPath(env), { force: true });
 }
 
 export async function saveConfig(config: CliConfig, env: NodeJS.ProcessEnv = process.env): Promise<void> {

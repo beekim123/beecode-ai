@@ -11,6 +11,17 @@ export interface BackendConfig {
   port: number;
   quotaLimitTokens: number;
   provider: "fake" | "anthropic" | "openai";
+  webOrigin: string;
+  publicBaseUrl: string;
+  iosOAuthRedirectUri: string;
+  cookieSecure: boolean;
+  devAuthEnabled: boolean;
+  browserSessionTtlSeconds: number;
+  accessTokenTtlSeconds: number;
+  refreshTokenTtlSeconds: number;
+  authorizationCodeTtlSeconds: number;
+  maxConcurrentWebTurnsPerAccount: number;
+  maxConcurrentIOSTurnsPerAccount: number;
   devLoginSecret?: string;
   anthropicApiKey?: string;
   anthropicModel?: string;
@@ -133,13 +144,28 @@ export function parseBackendConfigFile(raw: string, source: string): BackendConf
       case "openaiModel":
       case "openaiBaseUrl":
       case "dataFile":
+      case "webOrigin":
+      case "publicBaseUrl":
+      case "iosOAuthRedirectUri":
         config[key] = expectString(value, key, source);
+        break;
+      case "cookieSecure":
+      case "devAuthEnabled":
+        config[key] = expectBoolean(value, key, source);
         break;
       case "port":
         config.port = expectInteger(value, key, source, 1, 65_535);
         break;
       case "quotaLimitTokens":
         config.quotaLimitTokens = expectInteger(value, key, source, 1, Number.MAX_SAFE_INTEGER);
+        break;
+      case "browserSessionTtlSeconds":
+      case "accessTokenTtlSeconds":
+      case "refreshTokenTtlSeconds":
+      case "authorizationCodeTtlSeconds":
+      case "maxConcurrentWebTurnsPerAccount":
+      case "maxConcurrentIOSTurnsPerAccount":
+        config[key] = expectInteger(value, key, source, 1, Number.MAX_SAFE_INTEGER);
         break;
       case "provider":
         if (value !== "fake" && value !== "anthropic" && value !== "openai") {
@@ -164,13 +190,19 @@ function resolveConfig(file: BackendConfigFile, env: NodeJS.ProcessEnv): Backend
     throw new Error("BEECODE_PROVIDER must be fake, anthropic or openai");
   }
   const host = env.BEECODE_BACKEND_HOST ?? file.host ?? "127.0.0.1";
+  const port = parseInteger(env.BEECODE_BACKEND_PORT, file.port ?? 8787, "BEECODE_BACKEND_PORT", 1, 65_535);
   const devLoginSecret = env.BEECODE_DEV_LOGIN_SECRET ?? file.devLoginSecret;
-  if (!isLoopbackHost(host) && !devLoginSecret) {
+  const devAuthEnabled = parseBoolean(
+    env.BEECODE_DEV_AUTH_ENABLED,
+    file.devAuthEnabled ?? isLoopbackHost(host),
+    "BEECODE_DEV_AUTH_ENABLED",
+  );
+  if (devAuthEnabled && !isLoopbackHost(host) && !devLoginSecret) {
     throw new Error("BEECODE_DEV_LOGIN_SECRET is required when the backend listens beyond loopback");
   }
   return {
     host,
-    port: parseInteger(env.BEECODE_BACKEND_PORT, file.port ?? 8787, "BEECODE_BACKEND_PORT", 1, 65_535),
+    port,
     quotaLimitTokens: parseInteger(
       env.BEECODE_QUOTA_LIMIT_TOKENS,
       file.quotaLimitTokens ?? 1_000_000,
@@ -179,6 +211,60 @@ function resolveConfig(file: BackendConfigFile, env: NodeJS.ProcessEnv): Backend
       Number.MAX_SAFE_INTEGER,
     ),
     provider,
+    webOrigin: parseHttpUrl(env.BEECODE_WEB_ORIGIN ?? file.webOrigin ?? "http://127.0.0.1:5173", "BEECODE_WEB_ORIGIN"),
+    publicBaseUrl: parseHttpUrl(
+      env.BEECODE_PUBLIC_BASE_URL ?? file.publicBaseUrl ?? `http://${host}:${port}`,
+      "BEECODE_PUBLIC_BASE_URL",
+    ),
+    iosOAuthRedirectUri: parseIOSRedirectUri(
+      env.BEECODE_IOS_OAUTH_REDIRECT_URI ??
+        file.iosOAuthRedirectUri ??
+        "ai.beecode.ios://oauth/callback",
+    ),
+    cookieSecure: parseBoolean(env.BEECODE_COOKIE_SECURE, file.cookieSecure ?? false, "BEECODE_COOKIE_SECURE"),
+    devAuthEnabled,
+    browserSessionTtlSeconds: parseInteger(
+      env.BEECODE_BROWSER_SESSION_TTL_SECONDS,
+      file.browserSessionTtlSeconds ?? 30 * 24 * 60 * 60,
+      "BEECODE_BROWSER_SESSION_TTL_SECONDS",
+      1,
+      Number.MAX_SAFE_INTEGER,
+    ),
+    accessTokenTtlSeconds: parseInteger(
+      env.BEECODE_ACCESS_TOKEN_TTL_SECONDS,
+      file.accessTokenTtlSeconds ?? 15 * 60,
+      "BEECODE_ACCESS_TOKEN_TTL_SECONDS",
+      1,
+      Number.MAX_SAFE_INTEGER,
+    ),
+    refreshTokenTtlSeconds: parseInteger(
+      env.BEECODE_REFRESH_TOKEN_TTL_SECONDS,
+      file.refreshTokenTtlSeconds ?? 30 * 24 * 60 * 60,
+      "BEECODE_REFRESH_TOKEN_TTL_SECONDS",
+      1,
+      Number.MAX_SAFE_INTEGER,
+    ),
+    authorizationCodeTtlSeconds: parseInteger(
+      env.BEECODE_AUTHORIZATION_CODE_TTL_SECONDS,
+      file.authorizationCodeTtlSeconds ?? 5 * 60,
+      "BEECODE_AUTHORIZATION_CODE_TTL_SECONDS",
+      1,
+      Number.MAX_SAFE_INTEGER,
+    ),
+    maxConcurrentWebTurnsPerAccount: parseInteger(
+      env.BEECODE_MAX_CONCURRENT_WEB_TURNS_PER_ACCOUNT,
+      file.maxConcurrentWebTurnsPerAccount ?? 4,
+      "BEECODE_MAX_CONCURRENT_WEB_TURNS_PER_ACCOUNT",
+      1,
+      100,
+    ),
+    maxConcurrentIOSTurnsPerAccount: parseInteger(
+      env.BEECODE_MAX_CONCURRENT_IOS_TURNS_PER_ACCOUNT,
+      file.maxConcurrentIOSTurnsPerAccount ?? 4,
+      "BEECODE_MAX_CONCURRENT_IOS_TURNS_PER_ACCOUNT",
+      1,
+      100,
+    ),
     devLoginSecret,
     anthropicApiKey: env.ANTHROPIC_API_KEY ?? file.anthropicApiKey,
     anthropicModel: env.ANTHROPIC_MODEL ?? file.anthropicModel,
@@ -187,6 +273,32 @@ function resolveConfig(file: BackendConfigFile, env: NodeJS.ProcessEnv): Backend
     openaiBaseUrl: env.OPENAI_BASE_URL ?? file.openaiBaseUrl,
     dataFile: env.BEECODE_BACKEND_DATA ?? file.dataFile,
   };
+}
+
+function parseBoolean(raw: string | undefined, fallback: boolean, name: string): boolean {
+  if (raw === undefined) return fallback;
+  if (raw === "true") return true;
+  if (raw === "false") return false;
+  throw new Error(`${name} must be true or false`);
+}
+
+function parseHttpUrl(value: string, name: string): string {
+  const url = new URL(value);
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error(`${name} must use http or https`);
+  }
+  return url.toString().replace(/\/$/, "");
+}
+
+function parseIOSRedirectUri(value: string): string {
+  const url = new URL(value);
+  if (!url.protocol.endsWith(":" ) || url.protocol === "http:" || url.protocol === "https:") {
+    throw new Error("BEECODE_IOS_OAUTH_REDIRECT_URI must use a custom application scheme");
+  }
+  if (url.search || url.hash) {
+    throw new Error("BEECODE_IOS_OAUTH_REDIRECT_URI cannot contain a query or fragment");
+  }
+  return url.toString();
 }
 
 function parseInteger(
@@ -213,6 +325,13 @@ function expectString(value: unknown, key: string, source: string): string {
 function expectInteger(value: unknown, key: string, source: string, minimum: number, maximum: number): number {
   if (typeof value !== "number" || !Number.isInteger(value) || value < minimum || value > maximum) {
     throw new Error(`Backend config file ${source}: ${key} must be an integer between ${minimum} and ${maximum}`);
+  }
+  return value;
+}
+
+function expectBoolean(value: unknown, key: string, source: string): boolean {
+  if (typeof value !== "boolean") {
+    throw new Error(`Backend config file ${source}: ${key} must be a boolean`);
   }
   return value;
 }

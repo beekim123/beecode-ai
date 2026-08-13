@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { AgentEvent, AgentProtocolService, SessionSnapshot } from "@beecode/protocol";
+import type {
+  AgentEvent,
+  AgentEventEnvelope,
+  AgentProtocolService,
+  SessionSnapshot,
+} from "@beecode/protocol";
 import { BeecodeClient, InProcessTransport } from "../src/index.js";
 
 describe("BeecodeClient", () => {
@@ -19,11 +24,16 @@ describe("BeecodeClient", () => {
       messages: [],
       turns: [],
     };
-    let subscriber: ((event: AgentEvent) => void) | undefined;
+    let subscriber: ((event: AgentEventEnvelope) => void) | undefined;
     const service: AgentProtocolService = {
       createSession: async () => snapshot.session,
-      listSessions: async () => [snapshot.session],
+      listSessions: async () => ({ items: [snapshot.session], nextCursor: null }),
       getSessionSnapshot: async () => snapshot,
+      updateSession: async ({ title, status }) => ({
+        ...snapshot.session,
+        title: title ?? snapshot.session.title,
+        status: status ?? snapshot.session.status,
+      }),
       submitMessage: async ({ sessionId, text }) => ({
         turn: {
           id: "turn_1",
@@ -40,16 +50,34 @@ describe("BeecodeClient", () => {
           subscriber = undefined;
         };
       },
-      getCapabilities: async () => ({ tools: ["calculator"], surfaces: ["cli"], maxTurnSteps: 8 }),
+      getCapabilities: async () => ({
+        surface: "cli",
+        runtimeLocation: "local",
+        tools: [{ name: "calculator", description: "Calculate", available: true }],
+        features: {
+          localWorkspace: { available: false, reason: "runtime_missing" },
+          shell: { available: false, reason: "runtime_missing" },
+          git: { available: false, reason: "runtime_missing" },
+          attachments: { available: false, reason: "runtime_missing" },
+        },
+        limits: { maxTurnSteps: 8, maxInputBytes: 1024 },
+      }),
     };
     const client = new BeecodeClient(new InProcessTransport(service));
     const observed: AgentEvent[] = [];
     const unsubscribe = client.subscribe("ses_1", (event) => observed.push(event));
 
     subscriber?.({
-      type: "turn.cancelled",
+      eventId: "evt_1",
       sessionId: "ses_1",
       turnId: "turn_1",
+      sequence: 1,
+      occurredAt: now,
+      event: {
+        type: "turn.cancelled",
+        sessionId: "ses_1",
+        turnId: "turn_1",
+      },
     });
 
     expect(await client.listSessions()).toEqual([snapshot.session]);
