@@ -8,6 +8,7 @@ struct BeecodeApp: App {
     var body: some Scene {
         WindowGroup {
             RootView(store: store)
+                .tint(BeecodeVisual.accent)
         }
     }
 }

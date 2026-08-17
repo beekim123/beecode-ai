@@ -409,7 +409,6 @@
       }
     },
     "conversation.assistant" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -442,24 +441,39 @@
         }
       }
     },
-    "conversation.empty-message" : {
+    "conversation.disclaimer" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ask Beecode to calculate something."
+            "value" : "AI can make mistakes. Check important information."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "让 Beecode 帮你计算点什么。"
+            "value" : "AI 可能会出错，请核对重要信息。"
+          }
+        }
+      }
+    },
+    "conversation.empty-message" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Think through a problem, run a tool, or turn a rough idea into a useful next step."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一起分析问题、运行工具，或把一个模糊想法整理成可执行的下一步。"
           }
         }
       }
     },
     "conversation.empty-title" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -476,7 +490,6 @@
       }
     },
     "conversation.loading" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -505,6 +518,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "会话消息"
+          }
+        }
+      }
+    },
+    "conversation.mode" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agent"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agent"
           }
         }
       }
@@ -561,6 +591,7 @@
       }
     },
     "conversation.sending" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -589,6 +620,57 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "停止"
+          }
+        }
+      }
+    },
+    "conversation.suggestion.calculate" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calculate 128 × 64 and explain the result"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "计算 128 × 64，并解释结果"
+          }
+        }
+      }
+    },
+    "conversation.suggestion.explain" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Explain a difficult idea in simple language"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用简单语言解释一个复杂概念"
+          }
+        }
+      }
+    },
+    "conversation.suggestion.plan" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn my goal into a practical action plan"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "把我的目标整理成一份可执行计划"
           }
         }
       }

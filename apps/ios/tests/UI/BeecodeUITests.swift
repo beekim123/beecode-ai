@@ -35,6 +35,7 @@ final class BeecodeUITests: XCTestCase {
 
         let composer = application.descendants(matching: .any)["beecode.conversation.composer"]
         XCTAssertTrue(composer.waitForExistence(timeout: 5))
+        captureScreenshot(named: "conversation-empty", application: application)
         composer.tap()
         composer.typeText("计算 1+1")
         application.buttons["beecode.conversation.send"].tap()
@@ -46,5 +47,14 @@ final class BeecodeUITests: XCTestCase {
         XCTAssertTrue(
             application.descendants(matching: .any)["beecode.tool.result"].waitForExistence(timeout: 5)
         )
+        captureScreenshot(named: "conversation-tool-result", application: application)
+    }
+
+    @MainActor
+    private func captureScreenshot(named name: String, application: XCUIApplication) {
+        let attachment = XCTAttachment(screenshot: application.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
     }
 }

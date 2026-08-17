@@ -30,6 +30,7 @@
 		A00000000000000000000015 /* SessionReducerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000001B /* SessionReducerTests.swift */; };
 		A00000000000000000000016 /* SSEParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000001C /* SSEParserTests.swift */; };
 		A00000000000000000000017 /* SessionEventStreamTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000001D /* SessionEventStreamTests.swift */; };
+		A00000000000000000000018 /* BeecodeVisual.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000001E /* BeecodeVisual.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -79,6 +80,7 @@
 		B0000000000000000000001B /* SessionReducerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionReducerTests.swift; sourceTree = "<group>"; };
 		B0000000000000000000001C /* SSEParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSEParserTests.swift; sourceTree = "<group>"; };
 		B0000000000000000000001D /* SessionEventStreamTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionEventStreamTests.swift; sourceTree = "<group>"; };
+		B0000000000000000000001E /* BeecodeVisual.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BeecodeVisual.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -146,6 +148,7 @@
 				B00000000000000000000002 /* RootView.swift */,
 				B00000000000000000000012 /* AppStore.swift */,
 				B0000000000000000000001A /* ConversationView.swift */,
+				B0000000000000000000001E /* BeecodeVisual.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -373,6 +376,7 @@
 				A00000000000000000000012 /* SSEParser.swift in Sources */,
 				A00000000000000000000013 /* SessionEventStream.swift in Sources */,
 				A00000000000000000000014 /* ConversationView.swift in Sources */,
+				A00000000000000000000018 /* BeecodeVisual.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
