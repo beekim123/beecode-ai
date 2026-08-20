@@ -4,6 +4,7 @@ import { FileCredentialStore } from "./auth/credential-store.js";
 import { DEFAULT_BACKEND_URL } from "./config.js";
 import { composeCli } from "./compose.js";
 import { runRepl } from "./repl.js";
+import { LocalWorkspaceSource } from "@beecode/tools";
 
 async function main(argv: string[]): Promise<void> {
   const command = argv[2];
@@ -30,12 +31,18 @@ async function main(argv: string[]): Promise<void> {
     case "whoami":
       await whoAmI(backendUrl, credentialStore);
       return;
+    case "chat":
+      await chat(backendUrl, credentialStore, parseWorkspacePath(argv.slice(3)));
+      return;
+    case "--workspace":
+      await chat(backendUrl, credentialStore, requireWorkspacePath(argv[3], argv.slice(4)));
+      return;
     case undefined:
-      await chat(backendUrl, credentialStore);
+      await chat(backendUrl, credentialStore, process.env.BEECODE_WORKSPACE);
       return;
     default:
       process.stderr.write(
-        `Unknown command: ${command}\nUsage: beecode [login [--dev] | logout | whoami]\n`,
+        `Unknown command: ${command}\nUsage: beecode [chat [--workspace <directory>] | --workspace <directory> | login [--dev] | logout | whoami]\n`,
       );
       process.exitCode = 2;
   }
@@ -92,12 +99,40 @@ async function whoAmI(backendUrl: string, credentialStore: FileCredentialStore):
   );
 }
 
-async function chat(backendUrl: string, credentialStore: FileCredentialStore): Promise<void> {
+async function chat(
+  backendUrl: string,
+  credentialStore: FileCredentialStore,
+  workspacePath?: string,
+): Promise<void> {
   const config = await loadCurrentConfig(backendUrl, credentialStore);
   const fresh = await ensureFreshCredentials(config, credentialStore);
   const authenticatedFetch = createRefreshingFetch(fresh, credentialStore);
-  const { client } = composeCli({ config: fresh, fetchImpl: authenticatedFetch });
-  await runRepl({ client, input: process.stdin, output: process.stdout });
+  const workspace = workspacePath ? new LocalWorkspaceSource() : undefined;
+  const workspaceSummary = workspace && workspacePath
+    ? await workspace.configure(workspacePath)
+    : undefined;
+  const { client } = composeCli({ config: fresh, fetchImpl: authenticatedFetch, workspace });
+  await runRepl({
+    client,
+    input: process.stdin,
+    output: process.stdout,
+    workspace: workspaceSummary,
+  });
+}
+
+function parseWorkspacePath(args: string[]): string | undefined {
+  if (args.length === 0) return process.env.BEECODE_WORKSPACE;
+  if (args[0] !== "--workspace") {
+    throw new Error("Usage: beecode chat [--workspace <directory>]");
+  }
+  return requireWorkspacePath(args[1], args.slice(2));
+}
+
+function requireWorkspacePath(path: string | undefined, remaining: string[]): string {
+  if (!path || remaining.length > 0) {
+    throw new Error("Usage: beecode chat [--workspace <directory>]");
+  }
+  return path;
 }
 
 async function loadCurrentConfig(

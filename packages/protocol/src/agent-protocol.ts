@@ -1,5 +1,7 @@
 import type {
   BeecodeErrorShape,
+  BrowserWorkspaceReference,
+  BrowserWorkspaceToolRequest,
   Capability,
   Id,
   Page,
@@ -63,6 +65,8 @@ export interface ToolRequestedEvent extends EventBase {
   messageId: Id;
   partId: Id;
   toolCall: ToolCall;
+  /** Present only when the Web Runtime delegates read_file to the owning browser tab. */
+  browserWorkspaceRequest?: BrowserWorkspaceToolRequest;
 }
 
 export interface ToolStartedEvent extends EventBase {
@@ -114,11 +118,23 @@ export interface UpdateSessionInput {
   status?: Session["status"];
 }
 
+export const WORKSPACE_MAX_LISTED_FILES = 250;
+export const WORKSPACE_FILE_MAX_CONTENT_BYTES = 12 * 1024;
+
+/** Safe UI projection that never contains the local absolute path. */
+export interface WorkspaceSummary {
+  id: string;
+  name: string;
+  fileCount: number;
+}
+
 export interface SubmitMessageInput {
   sessionId: Id;
   text: string;
   /** Web 网络重试时用于防止重复创建 Message 与 Turn。 */
   idempotencyKey?: string;
+  /** Browser-local authorization reference. No path, file list, or file content is included. */
+  workspace?: BrowserWorkspaceReference;
 }
 
 export interface SubmitMessageResult {

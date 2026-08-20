@@ -14,7 +14,7 @@ import type { BackendStore, SessionRecord } from "../store.js";
 import type { AcceptedTurn, SessionRepository } from "./session-repository.js";
 import { nonTerminalTurnStatuses } from "./session-repository.js";
 
-type BackendSessionSurface = Extract<Surface, "web" | "ios">;
+type BackendSessionSurface = Extract<Surface, "web" | "ios" | "desktop">;
 
 export class StoreSessionRepository implements SessionRepository {
   constructor(
@@ -181,6 +181,41 @@ export class StoreSessionRepository implements SessionRepository {
     await this.store.flush();
   }
 
+  async replaceDesktopSnapshot(input: {
+    accountId: string;
+    sessionId: string;
+    expectedVersion: number;
+    runtimeId: string;
+    replacesRuntimeId?: string;
+    messages: Message[];
+    turns: Turn[];
+  }): Promise<Session> {
+    if (this.surface !== "desktop") {
+      throw new BeecodeError(ErrorCodes.SURFACE_UNAVAILABLE, "Snapshot replacement is Desktop-only");
+    }
+    const record = this.requireOwnedRecord(input.accountId, input.sessionId);
+    if (record.session.version !== input.expectedVersion) {
+      throw new BeecodeError(
+        ErrorCodes.SESSION_VERSION_CONFLICT,
+        "Session changed; reload before synchronizing",
+      );
+    }
+
+    validateDesktopSnapshot(record, input);
+    const activeTurn = input.turns.find((turn) => nonTerminalTurnStatuses.has(turn.status));
+    record.messages = structuredClone(input.messages);
+    record.turns = structuredClone(input.turns);
+    record.activeRuntimeId = activeTurn ? input.runtimeId : undefined;
+    record.session = {
+      ...record.session,
+      version: record.session.version + 1,
+      updatedAt: this.now().toISOString(),
+    };
+    this.store.putSession(record);
+    await this.store.flush();
+    return structuredClone(record.session);
+  }
+
   async recoverInterruptedTurns(): Promise<number> {
     let recovered = 0;
     const timestamp = this.now().toISOString();
@@ -249,7 +284,107 @@ export class StoreSessionRepository implements SessionRepository {
 }
 
 function surfaceLabel(surface: BackendSessionSurface): string {
-  return surface === "ios" ? "iOS" : "Web";
+  if (surface === "ios") return "iOS";
+  return surface === "desktop" ? "Desktop" : "Web";
+}
+
+function validateDesktopSnapshot(
+  record: SessionRecord,
+  input: {
+    sessionId: string;
+    runtimeId: string;
+    replacesRuntimeId?: string;
+    messages: Message[];
+    turns: Turn[];
+  },
+): void {
+  validateDesktopReferences(input.sessionId, input.messages, input.turns);
+  if (input.messages.length < record.messages.length || input.turns.length < record.turns.length) {
+    throw invalidSnapshot("Desktop snapshot history cannot be deleted");
+  }
+  for (let index = 0; index < record.messages.length; index += 1) {
+    if (!isSameValue(record.messages[index], input.messages[index])) {
+      throw invalidSnapshot("Existing Desktop messages are immutable");
+    }
+  }
+
+  const existingActive = record.turns.find((turn) => nonTerminalTurnStatuses.has(turn.status));
+  for (let index = 0; index < record.turns.length; index += 1) {
+    const previous = record.turns[index];
+    const next = input.turns[index];
+    if (!previous || !next || previous.id !== next.id || previous.index !== next.index) {
+      throw invalidSnapshot("Existing Desktop Turns cannot be removed or reordered");
+    }
+    if (!nonTerminalTurnStatuses.has(previous.status)) {
+      if (!isSameValue(previous, next)) {
+        throw invalidSnapshot("Terminal Desktop Turns are immutable");
+      }
+      continue;
+    }
+    validateActiveTurnOwner(record.activeRuntimeId, input, next);
+  }
+
+  const appended = input.turns.slice(record.turns.length);
+  if (appended.length > 1) {
+    throw invalidSnapshot("A Desktop snapshot can append at most one Turn");
+  }
+  const appendedTurn = appended[0];
+  if (appendedTurn) {
+    if (existingActive) {
+      throw new BeecodeError(ErrorCodes.TURN_ALREADY_ACTIVE, "Session already has an active Turn");
+    }
+    const expectedIndex = Math.max(0, ...record.turns.map((turn) => turn.index)) + 1;
+    if (appendedTurn.status !== "queued" || appendedTurn.index !== expectedIndex) {
+      throw invalidSnapshot("A new Desktop Turn must start queued with the next index");
+    }
+  }
+
+  if (input.turns.filter((turn) => nonTerminalTurnStatuses.has(turn.status)).length > 1) {
+    throw new BeecodeError(ErrorCodes.TURN_ALREADY_ACTIVE, "Session has multiple active Turns");
+  }
+}
+
+function validateDesktopReferences(sessionId: string, messages: Message[], turns: Turn[]): void {
+  if (messages.some((message) => message.sessionId !== sessionId)) {
+    throw invalidSnapshot("Every message must belong to the requested Desktop Session");
+  }
+  if (turns.some((turn) => turn.sessionId !== sessionId)) {
+    throw invalidSnapshot("Every Turn must belong to the requested Desktop Session");
+  }
+  const turnIds = new Set(turns.map((turn) => turn.id));
+  if (turnIds.size !== turns.length || new Set(turns.map((turn) => turn.index)).size !== turns.length) {
+    throw invalidSnapshot("Desktop Turn ids and indexes must be unique");
+  }
+  if (messages.some((message) => message.turnId !== undefined && !turnIds.has(message.turnId))) {
+    throw invalidSnapshot("Desktop message references a missing Turn");
+  }
+}
+
+function validateActiveTurnOwner(
+  activeRuntimeId: string | undefined,
+  input: { runtimeId: string; replacesRuntimeId?: string },
+  next: Turn,
+): void {
+  if (activeRuntimeId === input.runtimeId) return;
+  const isInterruptedRecovery =
+    activeRuntimeId !== undefined &&
+    input.replacesRuntimeId === activeRuntimeId &&
+    next.status === "failed" &&
+    next.error?.code === ErrorCodes.RUNTIME_INTERRUPTED;
+  if (!isInterruptedRecovery) {
+    throw new BeecodeError(
+      ErrorCodes.SESSION_VERSION_CONFLICT,
+      "Desktop Turn is owned by another Runtime",
+    );
+  }
+}
+
+function isSameValue(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function invalidSnapshot(message: string): BeecodeError {
+  return new BeecodeError(ErrorCodes.INVALID_REQUEST, message);
 }
 
 function encodeCursor(sessionId: string): string {

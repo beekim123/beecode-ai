@@ -4,11 +4,11 @@
 
 当前实现包含三个运行单元：
 
-- 本地 CLI：行式交互、Agent Runtime、Agent Loop 和 `calculator` 工具。
+- 本地 CLI：行式交互、Agent Runtime、Agent Loop、`calculator` 和可选的只读 Workspace 工具。
 - Beecode Backend：统一账号、CLI/Web Session、Web Runtime、额度和 Model Gateway。
 - Web：浏览器登录、Session 工作台、SSE 状态与后端 Agent Runtime。
 
-CLI 不持有模型供应商密钥。真实模型密钥只配置在 Backend。当前不包含 Shell、文件、Git、MCP、WebSocket 或多代理工具。
+CLI 不持有模型供应商密钥。真实模型密钥只配置在 Backend。CLI 可读取用户启动时明确授权的 Workspace 文本文件，当前不包含文件写入、Shell、Git、MCP、WebSocket 或多代理工具。
 
 ## 2. 环境要求
 
@@ -53,6 +53,14 @@ pnpm --filter @beecode/cli start login --dev
 ```bash
 pnpm cli
 ```
+
+为当前 CLI 进程授权一个只读 Workspace：
+
+```bash
+pnpm --filter @beecode/cli start chat --workspace /absolute/path/to/project
+```
+
+也可以使用 `beecode --workspace <directory>` 或设置 `BEECODE_WORKSPACE`。启动后 CLI 会显示 Workspace 名称和文件数；模型可用 `read_file` 在不传 `path` 时列出文件，或用 Workspace 相对路径读取 UTF-8 文本。绝对路径、`..`、二进制文件、超大文件和越界符号链接会被拒绝。未配置 Workspace 时，`read_file` 不会提供给模型。
 
 输入：
 
@@ -190,6 +198,7 @@ Backend 启动时读取 JSON 配置文件，路径按以下顺序解析：`BEECO
 | ---------------------------- | ------------------------- | --------------------------------------------------- |
 | `BEECODE_BACKEND_URL`      | `http://127.0.0.1:8787` | CLI 访问的 Backend URL                              |
 | `BEECODE_HOME`             | `~/.beecode`            | CLI 配置目录                                        |
+| `BEECODE_WORKSPACE`        | 无                       | 当前进程授权的本地 Workspace 目录                   |
 | `BEECODE_DEV_LOGIN_SECRET` | 无                        | 登录受保护的开发 Backend 时发送；不会保存到配置文件 |
 
 数值配置非法、Provider 名称未知，或者 Backend 监听非 loopback 地址但没有开发登录密钥时，Backend 会拒绝启动。

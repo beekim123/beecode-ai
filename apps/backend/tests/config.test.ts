@@ -13,6 +13,9 @@ import {
 describe("backend config", () => {
   it("binds to loopback by default", () => {
     expect(configFromEnv({}).host).toBe("127.0.0.1");
+    expect(configFromEnv({}).desktopOAuthRedirectUri).toBe(
+      "ai.beecode.desktop://oauth/callback",
+    );
   });
 
   it("disables development auth beyond loopback and requires a secret when explicitly enabled", () => {
@@ -35,6 +38,14 @@ describe("backend config", () => {
   it("rejects invalid numeric and provider configuration", () => {
     expect(() => configFromEnv({ BEECODE_BACKEND_PORT: "NaN" })).toThrow(/BEECODE_BACKEND_PORT/);
     expect(() => configFromEnv({ BEECODE_PROVIDER: "unknown" })).toThrow(/BEECODE_PROVIDER/);
+    expect(() =>
+      configFromEnv({ BEECODE_DESKTOP_OAUTH_REDIRECT_URI: "https://desktop.test/callback" }),
+    ).toThrow(/custom application scheme/);
+    expect(() =>
+      configFromEnv({
+        BEECODE_DESKTOP_OAUTH_REDIRECT_URI: "ai.beecode.desktop://oauth/callback?next=web",
+      }),
+    ).toThrow(/query or fragment/);
   });
 
   it("requires credentials before creating a real provider", () => {

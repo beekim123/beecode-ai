@@ -9,15 +9,21 @@ import {
   ErrorCodes,
   type AgentEvent,
   type AgentEventEnvelope,
+  type BrowserWorkspaceOperationResult,
+  type BrowserWorkspaceReference,
   type CapabilitySet,
   type Message,
   type SessionSnapshot,
   type Surface,
   type Turn,
 } from "@beecode/protocol";
-import { createDefaultToolRegistry } from "@beecode/tools";
+import {
+  READ_FILE_TOOL_DESCRIPTION,
+  createDefaultToolRegistry,
+} from "@beecode/tools";
 import type { ModelGatewayService } from "../model/model-gateway-service.js";
 import type { SessionRepository } from "../session/session-repository.js";
+import { BrowserWorkspaceSource } from "./browser-workspace-source.js";
 
 type EventSubscriber = (event: AgentEventEnvelope) => void;
 
@@ -32,6 +38,7 @@ interface ActiveExecution {
   turn: Turn;
   builder: TurnMessageBuilder;
   persistence: Promise<void>;
+  browserWorkspace?: BrowserWorkspaceSource;
 }
 
 type BackendRuntimeSurface = Extract<Surface, "web" | "ios">;
@@ -79,6 +86,7 @@ export class BackendSurfaceRuntimeHost {
         ...(channel ? { live: { sequence: channel.sequence } } : {}),
       };
     }
+    const browserWorkspaceRequests = active.browserWorkspace?.getPendingRequests() ?? [];
 
     return {
       session: snapshot.session,
@@ -89,6 +97,9 @@ export class BackendSurfaceRuntimeHost {
       live: {
         sequence: channel?.sequence ?? 0,
         activeTurnId: active.turn.id,
+        ...(browserWorkspaceRequests.length > 0
+          ? { browserWorkspaceRequests }
+          : {}),
       },
     };
   }
@@ -98,6 +109,7 @@ export class BackendSurfaceRuntimeHost {
     sessionId: string;
     text: string;
     idempotencyKey: string;
+    workspace?: BrowserWorkspaceReference;
   }): Promise<{ turn: Turn }> {
     await this.recovery;
     const activeCount = [...this.activeBySession.values()].filter(
@@ -115,7 +127,10 @@ export class BackendSurfaceRuntimeHost {
 
     const snapshot = await this.repository.getOwned(input.accountId, input.sessionId);
     if (!snapshot) throw new BeecodeError(ErrorCodes.SESSION_NOT_FOUND, this.notFoundMessage());
-    const tools = createDefaultToolRegistry();
+    const browserWorkspace = this.surface === "web" && input.workspace
+      ? new BrowserWorkspaceSource(input.workspace, accepted.turn.id)
+      : undefined;
+    const tools = createDefaultToolRegistry({ workspace: browserWorkspace });
     const runtime = new AgentRuntime({
       gateway: this.modelGateway.forAccount(input.accountId, accepted.turn.id),
       tools,
@@ -132,6 +147,7 @@ export class BackendSurfaceRuntimeHost {
       turn: structuredClone(accepted.turn),
       builder,
       persistence: Promise.resolve(),
+      browserWorkspace,
     };
     this.activeBySession.set(input.sessionId, active);
     runtime.onEvent((event) => this.applyRuntimeEvent(active, event));
@@ -160,6 +176,27 @@ export class BackendSurfaceRuntimeHost {
     active.runtime.cancelTurn(sessionId, turnId);
   }
 
+  async submitBrowserWorkspaceToolResult(
+    accountId: string,
+    sessionId: string,
+    turnId: string,
+    toolCallId: string,
+    workspaceId: string,
+    result: BrowserWorkspaceOperationResult,
+  ): Promise<void> {
+    await this.recovery;
+    const snapshot = await this.repository.getOwned(accountId, sessionId);
+    if (!snapshot) throw new BeecodeError(ErrorCodes.SESSION_NOT_FOUND, this.notFoundMessage());
+    const active = this.activeBySession.get(sessionId);
+    if (!active || active.accountId !== accountId || active.turn.id !== turnId) {
+      throw new BeecodeError(ErrorCodes.INVALID_REQUEST, "Turn is not active");
+    }
+    if (!active.browserWorkspace) {
+      throw new BeecodeError(ErrorCodes.INVALID_REQUEST, "Turn has no browser Workspace");
+    }
+    active.browserWorkspace.submitResult(toolCallId, workspaceId, result);
+  }
+
   subscribe(sessionId: string, subscriber: EventSubscriber): () => void {
     const channel = this.getChannel(sessionId);
     channel.subscribers.add(subscriber);
@@ -178,16 +215,25 @@ export class BackendSurfaceRuntimeHost {
   getCapabilities(): CapabilitySet {
     const tools = createDefaultToolRegistry();
     const unavailable = { available: false as const, reason: "surface_policy" as const };
+    const supportsBrowserWorkspace = this.surface === "web";
+    const toolCapabilities = tools.schemasFor(this.surface).map((schema) => ({
+      name: schema.name,
+      description: schema.description,
+      available: true as const,
+    }));
+    if (supportsBrowserWorkspace) {
+      toolCapabilities.push({
+        name: "read_file",
+        description: READ_FILE_TOOL_DESCRIPTION,
+        available: true,
+      });
+    }
     return {
       surface: this.surface,
       runtimeLocation: "backend",
-      tools: tools.schemasFor(this.surface).map((schema) => ({
-        name: schema.name,
-        description: schema.description,
-        available: true,
-      })),
+      tools: toolCapabilities,
       features: {
-        localWorkspace: unavailable,
+        localWorkspace: supportsBrowserWorkspace ? { available: true } : unavailable,
         shell: unavailable,
         git: unavailable,
         attachments: unavailable,
@@ -237,6 +283,7 @@ export class BackendSurfaceRuntimeHost {
       });
       throw beecode;
     } finally {
+      active.browserWorkspace?.dispose();
       this.activeBySession.delete(active.turn.sessionId);
       const channel = this.channels.get(active.turn.sessionId);
       if (channel?.subscribers.size === 0) this.channels.delete(active.turn.sessionId);
@@ -244,9 +291,15 @@ export class BackendSurfaceRuntimeHost {
   }
 
   private applyRuntimeEvent(active: ActiveExecution, event: AgentEvent): void {
-    active.builder.apply(event);
-    active.turn = projectTurn(active.turn, event);
-    this.broadcast(event);
+    const browserWorkspaceRequest = event.type === "tool.requested"
+      ? active.browserWorkspace?.prepare(event.toolCall)
+      : undefined;
+    const projectedEvent = event.type === "tool.requested" && browserWorkspaceRequest
+      ? { ...event, browserWorkspaceRequest }
+      : event;
+    active.builder.apply(projectedEvent);
+    active.turn = projectTurn(active.turn, projectedEvent);
+    this.broadcast(projectedEvent);
     if (
       event.type === "turn.started" ||
       event.type === "tool.completed" ||

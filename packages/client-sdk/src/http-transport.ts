@@ -15,6 +15,8 @@ import {
   type AccountSummary,
   type AgentEventEnvelope,
   type AgentProtocolService,
+  type BrowserWorkspaceOperationResult,
+  type BrowserWorkspaceToolRequest,
   type Capability,
   type CreateSessionInput,
   type Id,
@@ -111,7 +113,11 @@ export class HttpAgentTransport implements AgentProtocolService {
         }
         return { turn: parseTurn(value.turn) };
       },
-      { text: input.text, idempotencyKey: input.idempotencyKey },
+      {
+        text: input.text,
+        idempotencyKey: input.idempotencyKey,
+        ...(input.workspace ? { workspace: input.workspace } : {}),
+      },
     );
   }
 
@@ -119,6 +125,19 @@ export class HttpAgentTransport implements AgentProtocolService {
     await this.requestNoContent(
       "POST",
       `/v1/web/sessions/${encodeURIComponent(sessionId)}/turns/${encodeURIComponent(turnId)}/cancel`,
+    );
+  }
+
+  async submitBrowserWorkspaceToolResult(
+    sessionId: Id,
+    request: BrowserWorkspaceToolRequest,
+    result: BrowserWorkspaceOperationResult,
+  ): Promise<void> {
+    await this.requestNoContent(
+      "POST",
+      `/v1/web/sessions/${encodeURIComponent(sessionId)}/turns/${encodeURIComponent(request.turnId)}` +
+        `/tool-calls/${encodeURIComponent(request.toolCallId)}/result`,
+      { workspaceId: request.workspaceId, result },
     );
   }
 
@@ -252,11 +271,12 @@ export class HttpAgentTransport implements AgentProtocolService {
     return parse(await response.json());
   }
 
-  private async requestNoContent(method: string, path: string): Promise<void> {
+  private async requestNoContent(method: string, path: string, body?: unknown): Promise<void> {
     const response = await this.fetchImpl(this.url(path), {
       method,
       credentials: "include",
-      headers: createRequestHeaders(method, false),
+      headers: createRequestHeaders(method, body !== undefined),
+      body: body === undefined ? undefined : JSON.stringify(body),
     });
     if (!response.ok) throw await toBeecodeError(response);
   }

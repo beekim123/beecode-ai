@@ -82,17 +82,37 @@ describe("HttpAgentTransport", () => {
       sessionId: "ses_web",
       text: "hello",
       idempotencyKey: "idempotency-key",
+      workspace: { id: "browser_workspace_1", name: "project" },
     });
+    await transport.submitBrowserWorkspaceToolResult(
+      "ses_web",
+      {
+        turnId: "turn_1",
+        toolCallId: "tool_1",
+        workspaceId: "browser_workspace_1",
+        operation: { kind: "read", path: "README.md" },
+      },
+      {
+        ok: true,
+        output: { kind: "file", path: "README.md", sizeBytes: 5, content: "hello" },
+      },
+    );
     await transport.logout();
     expect(accepted.turn.status).toBe("queued");
     expect(requests.every((request) => request.init?.credentials === "include")).toBe(true);
     const writes = requests.filter((request) => request.init?.method !== "GET");
-    expect(writes).toHaveLength(3);
+    expect(writes).toHaveLength(4);
+    expect(JSON.parse(String(writes[1]?.init?.body))).toEqual({
+      text: "hello",
+      idempotencyKey: "idempotency-key",
+      workspace: { id: "browser_workspace_1", name: "project" },
+    });
+    expect(writes[2]?.url).toContain("/turns/turn_1/tool-calls/tool_1/result");
     expect(
       writes.map((request) =>
         new Headers(request.init?.headers).get(BEECODE_CSRF_HEADER_NAME),
       ),
-    ).toEqual(Array.from({ length: 3 }, () => BEECODE_CSRF_HEADER_VALUE));
+    ).toEqual(Array.from({ length: 4 }, () => BEECODE_CSRF_HEADER_VALUE));
   });
 
   it("buffers SSE events until the authoritative recovery snapshot is loaded", async () => {

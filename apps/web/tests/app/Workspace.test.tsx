@@ -39,9 +39,12 @@ describe("Workspace", () => {
     apiMocks.getCapabilities.mockResolvedValue({
       surface: "web",
       runtimeLocation: "backend",
-      tools: [],
+      tools: [
+        { name: "calculator", description: "Calculate", available: true },
+        { name: "read_file", description: "Read Workspace files", available: true },
+      ],
       features: {
-        localWorkspace: { available: false, reason: "surface_policy" },
+        localWorkspace: { available: true },
         shell: { available: false, reason: "surface_policy" },
         git: { available: false, reason: "surface_policy" },
         attachments: { available: false, reason: "surface_policy" },

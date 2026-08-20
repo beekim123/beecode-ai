@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  BrowserWorkspaceOperationResultSchema,
+  BrowserWorkspaceToolRequestSchema,
   SubmitTurnRequestSchema,
+  SubmitBrowserWorkspaceToolResultRequestSchema,
+  SubmitWebTurnRequestSchema,
+  ReplaceDesktopSessionSnapshotRequestSchema,
+  parseDesktopSurfacePolicy,
   parseAgentEventEnvelope,
   parseCapabilitySet,
   parseModelRequest,
@@ -8,6 +14,9 @@ import {
   parseSession,
   parseSessionSnapshot,
   phase2OpenApiDocument,
+  DESKTOP_IPC_PROTOCOL_VERSION,
+  parseDesktopIpcFrame,
+  parseDesktopIpcMethodResult,
 } from "../src/index.js";
 
 const now = "2026-08-06T00:00:00.000Z";
@@ -156,8 +165,174 @@ describe("protocol validation", () => {
     expect(phase2OpenApiDocument.paths["/v1/ios/sessions"].get.security).toEqual([
       { bearerAuth: [] },
     ]);
+    expect(phase2OpenApiDocument.paths["/v1/desktop/sessions"].get.operationId).toBe(
+      "listDesktopSessions",
+    );
+    expect(phase2OpenApiDocument.paths["/v1/desktop/sessions"].get.security).toEqual([
+      { bearerAuth: [] },
+    ]);
+    expect(
+      phase2OpenApiDocument.paths["/v1/desktop/sessions/{sessionId}/snapshot"].put
+        .operationId,
+    ).toBe("replaceDesktopSessionSnapshot");
+    expect(
+      phase2OpenApiDocument.paths[
+        "/v1/web/sessions/{sessionId}/turns/{turnId}/tool-calls/{toolCallId}/result"
+      ].post.operationId,
+    ).toBe("submitBrowserWorkspaceToolResult");
     expect(
       SubmitTurnRequestSchema.safeParse({ text: "计算 1+1", idempotencyKey: "request-0001" }).success,
     ).toBe(true);
+  });
+
+  it("validates Desktop policy and strict snapshot sync requests", () => {
+    expect(
+      parseDesktopSurfacePolicy({
+        surface: "desktop",
+        allowedTools: ["calculator"],
+        allowedFeatures: {
+          localWorkspace: false,
+          shell: false,
+          git: false,
+          attachments: false,
+        },
+        limits: { maxTurnSteps: 8, maxInputBytes: 1024, maxSnapshotBytes: 4096 },
+      }).surface,
+    ).toBe("desktop");
+    expect(
+      ReplaceDesktopSessionSnapshotRequestSchema.safeParse({
+        expectedVersion: 1,
+        runtimeId: "runtime_1",
+        messages: [],
+        turns: [],
+        surface: "web",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("validates the Desktop IPC boundary and method results", () => {
+    const request = parseDesktopIpcFrame({
+      protocolVersion: DESKTOP_IPC_PROTOCOL_VERSION,
+      kind: "request",
+      requestId: "request_1",
+      method: "turn.cancel",
+      payload: { sessionId: "session_1", turnId: "turn_1" },
+    });
+    expect(request.kind).toBe("request");
+    expect(parseDesktopIpcMethodResult("turn.cancel", null)).toBeNull();
+    const workspaceRequest = parseDesktopIpcFrame({
+      protocolVersion: DESKTOP_IPC_PROTOCOL_VERSION,
+      kind: "request",
+      requestId: "request_workspace",
+      method: "workspace.configure",
+      payload: { directoryPath: "/tmp/project" },
+    });
+    expect(workspaceRequest).toMatchObject({
+      kind: "request",
+      method: "workspace.configure",
+    });
+    expect(
+      parseDesktopIpcMethodResult("workspace.get", {
+        id: "workspace_1",
+        name: "project",
+        fileCount: 2,
+      }),
+    ).toEqual({ id: "workspace_1", name: "project", fileCount: 2 });
+
+    expect(() =>
+      parseDesktopIpcFrame({
+        protocolVersion: 2,
+        kind: "request",
+        requestId: "request_2",
+        method: "shell.execute",
+        payload: { command: "echo unsafe" },
+      }),
+    ).toThrow(/Invalid Desktop IPC/);
+    expect(() =>
+      parseDesktopIpcFrame({
+        protocolVersion: DESKTOP_IPC_PROTOCOL_VERSION,
+        kind: "request",
+        requestId: "request_3",
+        method: "session.getSnapshot",
+        payload: { sessionId: "session_1", token: "must-not-pass" },
+      }),
+    ).toThrow(/Invalid Desktop IPC/);
+    expect(() =>
+      parseDesktopIpcFrame({
+        protocolVersion: DESKTOP_IPC_PROTOCOL_VERSION,
+        kind: "request",
+        requestId: "request_workspace_relative",
+        method: "workspace.configure",
+        payload: { directoryPath: "relative/project" },
+      }),
+    ).toThrow(/directoryPath must be absolute/);
+    expect(() =>
+      parseDesktopIpcMethodResult("workspace.get", {
+        id: "workspace_1",
+        name: "project",
+        fileCount: 2,
+        directoryPath: "/tmp/project",
+      }),
+    ).toThrow(/Invalid Desktop IPC/);
+  });
+
+  it("accepts only an opaque browser Workspace reference and validates delegated results", () => {
+    expect(
+      SubmitWebTurnRequestSchema.safeParse({
+        text: "read the workspace",
+        idempotencyKey: "request-workspace-0001",
+        workspace: { id: "browser_workspace_1", name: "project" },
+      }).success,
+    ).toBe(true);
+    expect(
+      SubmitWebTurnRequestSchema.safeParse({
+        text: "read the workspace",
+        idempotencyKey: "request-workspace-0001",
+        workspace: {
+          id: "browser_workspace_1",
+          name: "project",
+          files: [{ path: "README.md", sizeBytes: 5, content: "hello" }],
+        },
+      }).success,
+    ).toBe(false);
+    expect(
+      BrowserWorkspaceToolRequestSchema.safeParse({
+        turnId: "turn_1",
+        toolCallId: "tool_1",
+        workspaceId: "browser_workspace_1",
+        operation: { kind: "read", path: "../secret.txt" },
+      }).success,
+    ).toBe(false);
+    expect(
+      BrowserWorkspaceOperationResultSchema.safeParse({
+        ok: true,
+        output: { kind: "file", path: "README.md", sizeBytes: 5, content: "hello" },
+      }).success,
+    ).toBe(true);
+    expect(
+      BrowserWorkspaceOperationResultSchema.safeParse({
+        ok: true,
+        output: { kind: "file", path: "README.md", sizeBytes: 4, content: "hello" },
+      }).success,
+    ).toBe(false);
+    expect(
+      SubmitBrowserWorkspaceToolResultRequestSchema.safeParse({
+        workspaceId: "browser_workspace_1",
+        result: { ok: false, error: { code: "permission_denied" } },
+      }).success,
+    ).toBe(true);
+    expect(
+      SubmitBrowserWorkspaceToolResultRequestSchema.safeParse({
+        workspaceId: "browser_workspace_1",
+        result: { ok: false, error: { code: "server_error", message: "raw" } },
+      }).success,
+    ).toBe(false);
+    expect(
+      SubmitTurnRequestSchema.safeParse({
+        text: "read the workspace",
+        idempotencyKey: "request-ios-0001",
+        workspace: { id: "browser_workspace_1", name: "project" },
+      }).success,
+    ).toBe(false);
   });
 });

@@ -2,8 +2,14 @@ import * as z from "zod";
 import {
   AgentEventEnvelopeSchema,
   AccountSummarySchema,
+  BrowserWorkspaceFileEntrySchema,
+  BrowserWorkspaceOperationResultSchema,
+  BrowserWorkspaceOperationSchema,
+  BrowserWorkspaceReferenceSchema,
+  BrowserWorkspaceToolRequestSchema,
   CapabilitySetSchema,
   CreateSessionRequestSchema,
+  DesktopSurfacePolicySchema,
   DevelopmentTokenResponseSchema,
   ErrorResponseSchema,
   MessageSchema,
@@ -11,10 +17,13 @@ import {
   ModelStreamEventSchema,
   QuotaResponseSchema,
   ReplaceCliSessionRequestSchema,
+  ReplaceDesktopSessionSnapshotRequestSchema,
   SessionPageSchema,
   SessionSchema,
   SessionSnapshotSchema,
   SubmitTurnRequestSchema,
+  SubmitBrowserWorkspaceToolResultRequestSchema,
+  SubmitWebTurnRequestSchema,
   SubmitTurnResponseSchema,
   ToolCallSchema,
   TurnSchema,
@@ -355,7 +364,7 @@ export const phase2OpenApiDocument = {
       ],
       post: {
         operationId: "createWebTurn",
-        requestBody: { required: true, content: jsonContent(ref("SubmitTurnRequest")) },
+        requestBody: { required: true, content: jsonContent(ref("SubmitWebTurnRequest")) },
         responses: { "202": response("Accepted Web turn", ref("SubmitTurnResponse")), ...errorResponses },
       },
     },
@@ -367,6 +376,24 @@ export const phase2OpenApiDocument = {
       post: {
         operationId: "cancelWebTurn",
         responses: { "204": emptyResponse("Turn cancelled or already terminal"), ...errorResponses },
+      },
+    },
+    "/v1/web/sessions/{sessionId}/turns/{turnId}/tool-calls/{toolCallId}/result": {
+      parameters: [
+        { name: "sessionId", in: "path", required: true, schema: { type: "string", minLength: 1 } },
+        { name: "turnId", in: "path", required: true, schema: { type: "string", minLength: 1 } },
+        { name: "toolCallId", in: "path", required: true, schema: { type: "string", minLength: 1 } },
+      ],
+      post: {
+        operationId: "submitBrowserWorkspaceToolResult",
+        requestBody: {
+          required: true,
+          content: jsonContent(ref("SubmitBrowserWorkspaceToolResultRequest")),
+        },
+        responses: {
+          "204": emptyResponse("Browser-local Workspace operation accepted"),
+          ...errorResponses,
+        },
       },
     },
     "/v1/web/sessions/{sessionId}/events": {
@@ -464,6 +491,63 @@ export const phase2OpenApiDocument = {
         },
       },
     },
+    "/v1/desktop/capabilities": {
+      get: {
+        operationId: "getDesktopCapabilities",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": response("Desktop surface policy", ref("DesktopSurfacePolicy")),
+          ...errorResponses,
+        },
+      },
+    },
+    "/v1/desktop/sessions": {
+      get: {
+        operationId: "listDesktopSessions",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "cursor", in: "query", required: false, schema: { type: "string", minLength: 1 } },
+          { name: "limit", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 100 } },
+        ],
+        responses: { "200": response("Desktop session page", ref("SessionPage")), ...errorResponses },
+      },
+      post: {
+        operationId: "createDesktopSession",
+        security: [{ bearerAuth: [] }],
+        requestBody: { required: false, content: jsonContent(ref("CreateSessionRequest")) },
+        responses: { "201": response("Created Desktop session", ref("Session")), ...errorResponses },
+      },
+    },
+    "/v1/desktop/sessions/{sessionId}": {
+      parameters: [
+        { name: "sessionId", in: "path", required: true, schema: { type: "string", minLength: 1 } },
+      ],
+      get: {
+        operationId: "getDesktopSession",
+        security: [{ bearerAuth: [] }],
+        responses: { "200": response("Desktop session snapshot", ref("SessionSnapshot")), ...errorResponses },
+      },
+      patch: {
+        operationId: "updateDesktopSession",
+        security: [{ bearerAuth: [] }],
+        requestBody: { required: true, content: jsonContent(ref("UpdateSessionRequest")) },
+        responses: { "200": response("Updated Desktop session", ref("Session")), ...errorResponses },
+      },
+    },
+    "/v1/desktop/sessions/{sessionId}/snapshot": {
+      parameters: [
+        { name: "sessionId", in: "path", required: true, schema: { type: "string", minLength: 1 } },
+      ],
+      put: {
+        operationId: "replaceDesktopSessionSnapshot",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: jsonContent(ref("ReplaceDesktopSessionSnapshotRequest")),
+        },
+        responses: { "200": response("Updated Desktop session", ref("Session")), ...errorResponses },
+      },
+    },
   },
   components: {
     securitySchemes: {
@@ -473,8 +557,14 @@ export const phase2OpenApiDocument = {
     schemas: {
       AccountSummary: json(AccountSummarySchema),
       AgentEventEnvelope: json(AgentEventEnvelopeSchema),
+      BrowserWorkspaceFileEntry: json(BrowserWorkspaceFileEntrySchema),
+      BrowserWorkspaceOperation: json(BrowserWorkspaceOperationSchema),
+      BrowserWorkspaceOperationResult: json(BrowserWorkspaceOperationResultSchema),
+      BrowserWorkspaceReference: json(BrowserWorkspaceReferenceSchema),
+      BrowserWorkspaceToolRequest: json(BrowserWorkspaceToolRequestSchema),
       CapabilitySet: json(CapabilitySetSchema),
       CreateSessionRequest: json(CreateSessionRequestSchema),
+      DesktopSurfacePolicy: json(DesktopSurfacePolicySchema),
       DevelopmentTokenResponse: json(DevelopmentTokenResponseSchema),
       ErrorResponse: json(ErrorResponseSchema),
       Message: json(MessageSchema),
@@ -482,10 +572,13 @@ export const phase2OpenApiDocument = {
       ModelStreamEvent: json(ModelStreamEventSchema),
       QuotaResponse: json(QuotaResponseSchema),
       ReplaceCliSessionRequest: json(ReplaceCliSessionRequestSchema),
+      ReplaceDesktopSessionSnapshotRequest: json(ReplaceDesktopSessionSnapshotRequestSchema),
       Session: json(SessionSchema),
       SessionPage: json(SessionPageSchema),
       SessionSnapshot: json(SessionSnapshotSchema),
       SubmitTurnRequest: json(SubmitTurnRequestSchema),
+      SubmitBrowserWorkspaceToolResultRequest: json(SubmitBrowserWorkspaceToolResultRequestSchema),
+      SubmitWebTurnRequest: json(SubmitWebTurnRequestSchema),
       SubmitTurnResponse: json(SubmitTurnResponseSchema),
       ToolCall: json(ToolCallSchema),
       Turn: json(TurnSchema),

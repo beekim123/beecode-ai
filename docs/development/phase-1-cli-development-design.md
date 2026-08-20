@@ -1,8 +1,8 @@
 # Beecode 第一阶段 CLI 开发设计
 
-> 状态：Draft，待技术选型确认
+> 状态：Implemented baseline，已扩展只读 Workspace
 > 范围：第一阶段仅实现 CLI 产品端
-> 更新日期：2026-08-05
+> 更新日期：2026-08-19
 > 上游文档：[Beecode 产品规格](../product/beecode-product-spec.md)
 > 架构参考：[OpenCode 架构设计参考](../pre/opencode-architecture-reference.md)
 
@@ -524,3 +524,9 @@ Agent: 1 + 1 = 2
 6. 本地是否第一阶段就增加持久缓存，还是完全以后端 Session 为准。
 
 这些选择不改变 Client/Runtime 边界、分端 Runtime、CLI Surface 数据隔离、Model Gateway 或 Tool Registry 的总体方向。
+
+## 19. 基线后扩展：只读 Workspace
+
+CLI 现支持在启动时通过 `--workspace <directory>` 或 `BEECODE_WORKSPACE` 明确授权一个本地目录。Runtime 注册动态 `read_file`：未配置 Workspace 时不向模型提供 Schema；配置后可列出文件或按 Workspace 相对路径读取受大小限制的 UTF-8 文本。
+
+路径解析以授权目录的 canonical path 为边界，拒绝绝对路径、父级穿越、二进制、超大文件和越界符号链接。Workspace 路径不进入 Backend Session；另一个设备读取同一 CLI Session 历史时不会自动获得该目录权限。

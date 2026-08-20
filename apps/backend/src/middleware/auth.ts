@@ -29,15 +29,23 @@ export function requireAccount(
         context,
         401,
         ErrorCodes.UNAUTHENTICATED,
-        allowedClientIds?.includes("beecode-ios")
-          ? "Missing, expired, or non-iOS Beecode token"
-          : "Missing or invalid Beecode token; run `beecode login`",
+        authenticationMessage(allowedClientIds),
       );
     }
 
     context.set("account", account);
     await next();
   });
+}
+
+function authenticationMessage(allowedClientIds: readonly string[] | undefined): string {
+  if (allowedClientIds?.includes("beecode-ios")) {
+    return "Missing, expired, or non-iOS Beecode token";
+  }
+  if (allowedClientIds?.includes("beecode-desktop")) {
+    return "Missing, expired, or non-Desktop Beecode token";
+  }
+  return "Missing or invalid Beecode token; run `beecode login`";
 }
 
 export function requireBrowserAccount(auth: AuthService) {

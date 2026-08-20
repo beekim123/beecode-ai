@@ -5,7 +5,8 @@ import {
   CreateSessionRequestSchema,
   ErrorCodes,
   ListSessionsQuerySchema,
-  SubmitTurnRequestSchema,
+  SubmitBrowserWorkspaceToolResultRequestSchema,
+  SubmitWebTurnRequestSchema,
   UpdateSessionRequestSchema,
 } from "@beecode/protocol";
 import type { BackendAppServices, BackendEnv } from "../app-context.js";
@@ -88,7 +89,7 @@ export function createWebAgentRoutes(services: BackendAppServices): Hono<Backend
   routes.post(
     "/v1/web/sessions/:sessionId/turns",
     origin,
-    sValidator("json", SubmitTurnRequestSchema, (result, context) => {
+    sValidator("json", SubmitWebTurnRequestSchema, (result, context) => {
       if (!result.success) return invalidRequest(context, result.error[0]?.message ?? "Invalid turn request");
     }),
     async (context) => {
@@ -98,6 +99,7 @@ export function createWebAgentRoutes(services: BackendAppServices): Hono<Backend
         sessionId: context.req.param("sessionId"),
         text: input.text,
         idempotencyKey: input.idempotencyKey,
+        workspace: input.workspace,
       });
       return context.json(result, 202);
     },
@@ -111,6 +113,28 @@ export function createWebAgentRoutes(services: BackendAppServices): Hono<Backend
         context.get("account").accountId,
         context.req.param("sessionId"),
         context.req.param("turnId"),
+      );
+      return context.body(null, 204);
+    },
+  );
+
+  routes.post(
+    "/v1/web/sessions/:sessionId/turns/:turnId/tool-calls/:toolCallId/result",
+    origin,
+    sValidator("json", SubmitBrowserWorkspaceToolResultRequestSchema, (result, context) => {
+      if (!result.success) {
+        return invalidRequest(context, result.error[0]?.message ?? "Invalid browser Workspace result");
+      }
+    }),
+    async (context) => {
+      const input = context.req.valid("json");
+      await services.webRuntime.submitBrowserWorkspaceToolResult(
+        context.get("account").accountId,
+        context.req.param("sessionId"),
+        context.req.param("turnId"),
+        context.req.param("toolCallId"),
+        input.workspaceId,
+        input.result,
       );
       return context.body(null, 204);
     },

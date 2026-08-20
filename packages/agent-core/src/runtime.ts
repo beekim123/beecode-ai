@@ -221,7 +221,13 @@ export class AgentRuntime {
           toolCall.status = "running";
           this.emit({ type: "tool.started", sessionId: turn.sessionId, turnId: turn.id, toolCallId: toolCall.id });
 
-          const { result } = await this.tools.execute(call.name, call.input, this.surface, abort.signal);
+          const { result } = await this.tools.execute(
+            call.name,
+            call.input,
+            this.surface,
+            abort.signal,
+            { sessionId: turn.sessionId, turnId: turn.id, toolCallId: toolCall.id },
+          );
           this.throwIfCancelled(abort, turn);
           let toolContent: string;
           if (result.ok) {

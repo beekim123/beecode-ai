@@ -12,6 +12,8 @@ backend-data.json.tmp
 
 # 构建与测试产物
 **/dist/
+**/.vite/
+**/out/
 coverage/
 **/playwright-report/
 **/test-results/

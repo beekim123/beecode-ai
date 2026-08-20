@@ -2,7 +2,7 @@
 
 > 状态：Implemented development baseline  
 > 范围：Web 产品端、后端 Web Runtime、统一账号登录、CLI 浏览器登录  
-> 更新日期：2026-08-10  
+> 更新日期：2026-08-19
 > 上游文档：[Beecode 产品规格](../product/beecode-product-spec.md)  
 > 前置实现：[第一阶段 CLI 开发设计](./phase-1-cli-development-design.md)  
 > 架构参考：[OpenCode 架构设计参考](../pre/opencode-architecture-reference.md)
@@ -78,7 +78,7 @@
 ### 3.2 本阶段明确不负责
 
 - Desktop、Android 或 iOS 应用代码。
-- Web 访问用户电脑上的文件、Shell、Git、LSP 或本机凭据。
+- Web Backend 任意访问用户电脑路径，或获得 Shell、Git、LSP、本机凭据和持久文件权限。
 - 云端隔离 Workspace、容器、虚拟机或持久文件系统。
 - PTY、交互式终端和 WebSocket。
 - CLI Session 与 Web Session 的跨 surface 同步或继续。
@@ -725,12 +725,13 @@ sequenceDiagram
 
 ## 16. Tool Capability
 
-Web 第一版注册 `calculator`，并明确声明以下能力不可用：
+Web 第一版注册 `calculator`。基线后的只读 Workspace 扩展使用 File System Access API 保存用户显式选择的目录句柄，并只在 `read_file` Tool Call 到达时访问对应相对路径。Turn 只提交不透明的 Workspace ID 和显示名称，不提交绝对路径、目录清单或文件内容：
 
 | 能力 | Web 行为 |
 | --- | --- |
 | calculator | 可用，由后端 Runtime 执行 |
-| 用户电脑文件 | 不可用，原因 `surface_policy` |
+| 浏览器授权的目录句柄 | `read_file` 可按需列出文件或读取受限 UTF-8 文本；不批量上传目录 |
+| 用户电脑任意路径 | 不可用，Backend 不能直接访问浏览器所在设备文件系统 |
 | 用户电脑 Shell | 不可用，原因 `surface_policy` |
 | 用户电脑 Git | 不可用，原因 `surface_policy` |
 | 后端服务型工具 | 后续按 allowlist 增加 |
@@ -741,7 +742,9 @@ Runtime 在两个位置强制校验：
 1. 模型调用前只暴露当前可用 Tool Schema。
 2. Tool 执行前再次检查 surface、注册状态和输入 Schema。
 
-UI 中隐藏不存在的操作入口，但能力详情页仍可以解释平台限制。
+浏览器委托仍由 Backend Runtime 管理 ToolCall 权威状态。Backend 在 `tool.requested` SSE 事件中携带当前 Workspace ID、Turn ID、ToolCall ID 和规范化操作，浏览器完成本地读取后通过受认证结果路由回传；该路由校验账号、Session、活动 Turn、ToolCall、Workspace ID、操作类型、相对路径和结果大小。SSE 重连后的权威快照包含仍在等待的浏览器请求，Turn 取消或结束会清理全部等待项。
+
+Workspace 句柄不写入 Session，刷新页面后失效；不支持 File System Access API 的浏览器显示本地 Workspace 不可用，不回退为目录上传。单次列表最多返回 250 个文件，单文件只接受 12 KiB 以内的有效 UTF-8 文本；二进制、超大内容和不安全路径会被拒绝。UI 中隐藏不存在的操作入口，但能力详情页仍可以解释平台限制。
 
 ## 17. Web 前端架构
 
@@ -1126,7 +1129,7 @@ outputTokens
 - Backend 重启后不存在永久卡住的 running Turn。
 - 同账号不同浏览器可以查看相同 Web Session。
 - CLI 与 Web Session 严格隔离。
-- Web 不获得文件、Shell、Git 等本机能力。
+- Web 只通过当前标签页持有用户显式授权的临时只读目录句柄，并按 Tool Call 读取，不获得任意路径、Shell、Git 等本机能力。
 - Provider Key、Token 和 Cookie 不出现在客户端 bundle、日志或 Session。
 - OpenAPI、Client SDK 和 Server 契约测试通过。
 - 所有测试位于独立 `tests/` 目录。
@@ -1162,6 +1165,6 @@ outputTokens
 
 ## 29. 实现状态（2026-08-10）
 
-Slice 0–8 的本地开发纵向闭环已落地：Hono 组合根、浏览器 Session、CLI OAuth/PKCE、Token 轮换、Web Session Repository、Web Runtime、calculator、SSE 恢复、Client SDK、React 工作台、响应式布局和 Playwright 场景均已有代码与自动化覆盖。
+Slice 0–8 的本地开发纵向闭环已落地：Hono 组合根、浏览器 Session、CLI OAuth/PKCE、Token 轮换、Web Session Repository、Web Runtime、calculator、SSE 恢复、Client SDK、React 工作台、响应式布局和 Playwright 场景均已有代码与自动化覆盖。基线后增加了浏览器目录句柄、按需 `read_file` 委托和真实 Runtime 测试；该能力不改变 Backend Runtime 的部署位置，不批量上传目录，也不授予服务器任意本机路径访问。
 
 第 28 节中的正式身份提供商、生产关系数据库、系统钥匙串和部署拓扑仍属于环境相关的生产决策。当前实现通过 `IdentityProvider`、`SessionRepository`、`CredentialStore` 和配置对象保留替换边界，并提供 development identity、JSON migration store 与安全文件凭据回退，不能把这些开发实现误配置为生产方案。

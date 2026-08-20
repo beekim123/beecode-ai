@@ -235,6 +235,9 @@ export class AgentServerFacade implements AgentProtocolService {
     if (title !== undefined && title.length === 0) {
       throw new BeecodeError(ErrorCodes.INVALID_REQUEST, "Session title must not be empty");
     }
+    if (this.backend.updateSession) {
+      return this.backend.updateSession({ ...input, ...(title !== undefined ? { title } : {}) });
+    }
     const updated = await this.persist(
       {
         ...snapshot,
@@ -272,6 +275,7 @@ export class AgentServerFacade implements AgentProtocolService {
     const unavailableReason: CapabilityUnavailableReason =
       this.surface === "web" ? "surface_policy" : "runtime_missing";
     const unavailable = { available: false as const, reason: unavailableReason };
+    const hasWorkspace = this.tools.schemasFor(this.surface).some((schema) => schema.name === "read_file");
     return {
       surface: this.surface,
       runtimeLocation: this.surface === "web" ? "backend" : "local",
@@ -281,7 +285,9 @@ export class AgentServerFacade implements AgentProtocolService {
         available: true,
       })),
       features: {
-        localWorkspace: unavailable,
+        localWorkspace: hasWorkspace
+          ? { available: true }
+          : { available: false, reason: "not_configured" },
         shell: unavailable,
         git: unavailable,
         attachments: unavailable,

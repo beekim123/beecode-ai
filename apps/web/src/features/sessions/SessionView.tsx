@@ -1,12 +1,24 @@
 import { ArrowDown, Menu, PanelRightClose, PanelRightOpen, Pencil, RotateCw, WifiOff, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BeecodeError, ErrorCodes, type SessionSnapshot, type ToolCall, type Turn } from "@beecode/protocol";
+import {
+  BeecodeError,
+  ErrorCodes,
+  type BrowserWorkspaceToolRequest,
+  type SessionSnapshot,
+  type ToolCall,
+  type Turn,
+} from "@beecode/protocol";
 import type { ConnectionState } from "@beecode/client-sdk";
 import { agentClient, webTransport } from "../../lib/api.js";
 import { localizedErrorMessage, localizedSessionTitle } from "../../lib/localization.js";
 import { navigate } from "../../lib/navigation.js";
 import { Composer } from "./Composer.js";
 import { MessageList, type ConversationActivityStatus } from "./MessageList.js";
+import { WorkspacePicker } from "../workspaces/WorkspacePicker.js";
+import {
+  executeBrowserWorkspaceRequest,
+  type BrowserWorkspace,
+} from "../workspaces/browser-workspace.js";
 import {
   appendOptimisticUserMessage,
   applyAgentEnvelope,
@@ -17,6 +29,8 @@ import {
 
 interface SessionViewProps {
   sessionId: string;
+  workspace?: BrowserWorkspace;
+  onWorkspaceChange(workspace: BrowserWorkspace | undefined): void;
   onMenu(): void;
   onSessionChanged(): void;
 }
@@ -25,7 +39,13 @@ interface PendingSubmission extends OptimisticUserMessageInput {
   idempotencyKey: string;
 }
 
-export function SessionView({ sessionId, onMenu, onSessionChanged }: SessionViewProps): React.JSX.Element {
+export function SessionView({
+  sessionId,
+  workspace,
+  onWorkspaceChange,
+  onMenu,
+  onSessionChanged,
+}: SessionViewProps): React.JSX.Element {
   const [snapshot, setSnapshot] = useState<SessionSnapshot>();
   const [connection, setConnection] = useState<ConnectionState>("connecting");
   const [error, setError] = useState<BeecodeError>();
@@ -41,6 +61,8 @@ export function SessionView({ sessionId, onMenu, onSessionChanged }: SessionView
   const conversationScroll = useRef<HTMLDivElement>(null);
   const shouldFollowConversation = useRef(true);
   const forceFollowConversation = useRef(false);
+  const browserWorkspaceRequestsInFlight = useRef(new Set<string>());
+  const browserWorkspaceRequestsCompleted = useRef(new Set<string>());
 
   const loadSnapshot = useCallback(async () => {
     try {
@@ -62,15 +84,37 @@ export function SessionView({ sessionId, onMenu, onSessionChanged }: SessionView
     setHasNewActivity(false);
     pendingSubmission.current = undefined;
     submissionInFlight.current = false;
+    browserWorkspaceRequestsInFlight.current.clear();
+    browserWorkspaceRequestsCompleted.current.clear();
     shouldFollowConversation.current = true;
+    const respondToBrowserWorkspaceRequest = (request: BrowserWorkspaceToolRequest): void => {
+      if (workspace?.reference.id !== request.workspaceId) return;
+      const requestKey = `${request.turnId}:${request.toolCallId}`;
+      if (
+        browserWorkspaceRequestsInFlight.current.has(requestKey) ||
+        browserWorkspaceRequestsCompleted.current.has(requestKey)
+      ) return;
+      browserWorkspaceRequestsInFlight.current.add(requestKey);
+      void executeBrowserWorkspaceRequest(workspace, request)
+        .then((result) => webTransport.submitBrowserWorkspaceToolResult(sessionId, request, result))
+        .then(() => browserWorkspaceRequestsCompleted.current.add(requestKey))
+        .catch((caught: unknown) => setError(BeecodeError.fromUnknown(caught)))
+        .finally(() => browserWorkspaceRequestsInFlight.current.delete(requestKey));
+    };
     return webTransport.subscribeWithRecovery(sessionId, {
       onSnapshot: (next) => {
         setSnapshot(restorePendingSubmission(next, pendingSubmission.current));
         setTitleDraft(localizedSessionTitle(next.session.title));
+        for (const request of next.live?.browserWorkspaceRequests ?? []) {
+          respondToBrowserWorkspaceRequest(request);
+        }
       },
       onEvent: (envelope) => {
         setSnapshot((current) => current ? applyAgentEnvelope(current, envelope) : current);
         const type = envelope.event.type;
+        if (type === "tool.requested" && envelope.event.browserWorkspaceRequest) {
+          respondToBrowserWorkspaceRequest(envelope.event.browserWorkspaceRequest);
+        }
         if (type === "turn.completed" || type === "turn.failed" || type === "turn.cancelled") {
           void webTransport.getSessionSnapshot(sessionId)
             .then((next) => setSnapshot(restorePendingSubmission(next, pendingSubmission.current)))
@@ -81,7 +125,7 @@ export function SessionView({ sessionId, onMenu, onSessionChanged }: SessionView
       onConnectionState: setConnection,
       onError: setError,
     });
-  }, [onSessionChanged, sessionId]);
+  }, [onSessionChanged, sessionId, workspace]);
 
   const activeTurn = useMemo(
     () => snapshot?.turns.find((turn) => activeStatus(turn.status) !== undefined),
@@ -132,7 +176,12 @@ export function SessionView({ sessionId, onMenu, onSessionChanged }: SessionView
     setIsSending(true);
     setError(undefined);
     try {
-      const { turn } = await agentClient.submitMessage(sessionId, text, idempotencyKey);
+      const { turn } = await agentClient.submitMessage(
+        sessionId,
+        text,
+        idempotencyKey,
+        workspace?.reference,
+      );
       pendingSubmission.current = undefined;
       setSnapshot((current) => current
         ? reconcileAcceptedTurn(current, turn, optimisticMessageId, text)
@@ -296,6 +345,13 @@ export function SessionView({ sessionId, onMenu, onSessionChanged }: SessionView
           isRunning={Boolean(activeTurn)}
           isConnected={connection === "connected"}
           isSending={isSending}
+          workspaceControl={(
+            <WorkspacePicker
+              workspace={workspace}
+              disabled={Boolean(activeTurn) || isSending}
+              onChange={onWorkspaceChange}
+            />
+          )}
           onChange={setDraft}
           onSubmit={() => void submit()}
           onCancel={() => void cancel()}

@@ -2,6 +2,64 @@ import { createHash, randomBytes } from "node:crypto";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
 const calculatorAnswer = /^\s*1\s*\+\s*1\s*=\s*2\s*$/;
+const backendUrl = `http://127.0.0.1:${process.env.BEECODE_E2E_BACKEND_PORT ?? "8787"}`;
+const webUrl = `http://127.0.0.1:${process.env.BEECODE_E2E_WEB_PORT ?? "5173"}`;
+
+test("reads one requested browser Workspace file without uploading the directory", async ({ page }) => {
+  await page.addInitScript(() => {
+    const fileHandle = {
+      kind: "file",
+      name: "README.md",
+      getFile: () => Promise.resolve(new File(["browser workspace e2e"], "README.md")),
+    };
+    const directoryHandle = {
+      kind: "directory",
+      name: "e2e-project",
+      values: () => (async function* () { yield fileHandle; })(),
+      getDirectoryHandle: () => Promise.reject(new DOMException("Not found", "NotFoundError")),
+      getFileHandle: (name: string) => name === "README.md"
+        ? Promise.resolve(fileHandle)
+        : Promise.reject(new DOMException("Not found", "NotFoundError")),
+    };
+    Object.defineProperty(window, "showDirectoryPicker", {
+      configurable: true,
+      value: () => Promise.resolve(directoryHandle),
+    });
+  });
+  await login(page);
+  const consoleProblems = monitorConsoleProblems(page);
+  await page.getByRole("button", { name: "新建会话" }).click();
+  await expect(page).toHaveURL(/\/app\/session\/[^/]+$/);
+
+  let turnBody: Record<string, unknown> | undefined;
+  let toolResultBody: Record<string, unknown> | undefined;
+  await page.route("**/v1/web/sessions/*/turns", async (route) => {
+    if (route.request().method() === "POST") turnBody = route.request().postDataJSON();
+    await route.continue();
+  });
+  await page.route("**/v1/web/sessions/*/turns/*/tool-calls/*/result", async (route) => {
+    toolResultBody = route.request().postDataJSON();
+    await route.continue();
+  });
+
+  await page.getByRole("button", { name: "添加工作空间" }).click();
+  await expect(page.getByRole("status", { name: "当前工作空间" })).toContainText("e2e-project");
+  await page.getByRole("textbox", { name: "给 Beecode 发送消息" }).fill("读取 README.md");
+  await page.getByRole("button", { name: "发送消息" }).click();
+
+  await expect(page.getByRole("button", { name: "查看 read_file 详情" })).toContainText("已完成");
+  await expect(
+    page.locator('[data-message-role="tool"]').getByText(/browser workspace e2e/),
+  ).toBeVisible();
+  expect(turnBody).toMatchObject({
+    text: "读取 README.md",
+    workspace: { id: expect.stringMatching(/^browser_workspace_/), name: "e2e-project" },
+  });
+  expect(Object.keys(turnBody?.workspace as Record<string, unknown>)).toEqual(["id", "name"]);
+  expect(JSON.stringify(turnBody)).not.toContain("browser workspace e2e");
+  expect(JSON.stringify(toolResultBody)).toContain("browser workspace e2e");
+  expect(consoleProblems).toEqual([]);
+});
 
 test("runs calculator, restores after refresh, and shares the account across browsers", async ({
   browser,
@@ -14,6 +72,11 @@ test("runs calculator, restores after refresh, and shares the account across bro
   await expect(page).toHaveURL(/\/app\/session\/[^/]+$/);
   const sessionUrl = page.url();
   const sessionId = decodeURIComponent(new URL(sessionUrl).pathname.split("/").at(-1) ?? "");
+
+  const workspaceBox = await page.getByRole("button", { name: "添加工作空间" }).boundingBox();
+  const composerBox = await page.getByRole("textbox", { name: "给 Beecode 发送消息" }).boundingBox();
+  if (!workspaceBox || !composerBox) throw new Error("Workspace and composer must be measurable");
+  expect(workspaceBox.y + workspaceBox.height).toBeLessThanOrEqual(composerBox.y);
 
   await page.getByRole("textbox", { name: "给 Beecode 发送消息" }).fill("计算 1+1");
   await page.getByRole("button", { name: "发送消息" }).click();
@@ -119,7 +182,7 @@ test("keeps archive in the session menu and explains that history is retained", 
 test("routes a direct CLI authorization request through Web login and consent", async ({ page }) => {
   const verifier = randomBytes(32).toString("base64url");
   const challenge = createHash("sha256").update(verifier).digest("base64url");
-  const authorize = new URL("http://127.0.0.1:8787/oauth/authorize");
+  const authorize = new URL("/oauth/authorize", backendUrl);
   authorize.search = new URLSearchParams({
     response_type: "code",
     client_id: "beecode-cli",
@@ -130,9 +193,9 @@ test("routes a direct CLI authorization request through Web login and consent", 
   }).toString();
 
   await page.goto(authorize.toString());
-  await expect(page).toHaveURL(/http:\/\/127\.0\.0\.1:5173\/login\?returnTo=/);
+  await expect(page).toHaveURL((url) => url.origin === webUrl && url.pathname === "/login");
   await page.getByRole("link", { name: "使用开发账号登录" }).click();
-  await expect(page).toHaveURL(/http:\/\/127\.0\.0\.1:5173\/oauth\/authorize\?/);
+  await expect(page).toHaveURL((url) => url.origin === webUrl && url.pathname === "/oauth/authorize");
   await expect(page.getByRole("heading", { name: /授权此命令行客户端？|Authorize this CLI\?/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /授权|Authorize/ })).toBeVisible();
 });
@@ -191,7 +254,7 @@ async function authorizeCliForCurrentAccount(context: BrowserContext): Promise<s
       state,
       decision: "allow",
     },
-    headers: { origin: "http://127.0.0.1:5173" },
+    headers: { origin: webUrl },
     maxRedirects: 0,
   });
   expect(authorize.status()).toBe(302);

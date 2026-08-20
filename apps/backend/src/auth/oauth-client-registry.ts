@@ -2,6 +2,7 @@ import { BeecodeError, ErrorCodes } from "@beecode/protocol";
 
 export const CLI_OAUTH_CLIENT_ID = "beecode-cli";
 export const IOS_OAUTH_CLIENT_ID = "beecode-ios";
+export const DESKTOP_OAUTH_CLIENT_ID = "beecode-desktop";
 
 export interface OAuthClientRegistration {
   clientId: string;
@@ -11,7 +12,10 @@ export interface OAuthClientRegistration {
 }
 
 export class OAuthClientRegistry {
-  constructor(private readonly iosRedirectUri: string) {}
+  constructor(
+    private readonly iosRedirectUri: string,
+    private readonly desktopRedirectUri: string = "ai.beecode.desktop://oauth/callback",
+  ) {}
 
   validateAuthorizationRequest(
     clientId: string,
@@ -22,10 +26,15 @@ export class OAuthClientRegistry {
     validatePKCEChallenge(challenge);
     if (clientId === CLI_OAUTH_CLIENT_ID) {
       validateCLIRedirectUri(redirectUri);
-    } else if (redirectUri !== this.iosRedirectUri) {
+    } else if (clientId === IOS_OAUTH_CLIENT_ID && redirectUri !== this.iosRedirectUri) {
       throw new BeecodeError(
         ErrorCodes.AUTHORIZATION_DENIED,
         "iOS redirect URI must exactly match the registered callback",
+      );
+    } else if (clientId === DESKTOP_OAUTH_CLIENT_ID && redirectUri !== this.desktopRedirectUri) {
+      throw new BeecodeError(
+        ErrorCodes.AUTHORIZATION_DENIED,
+        "Desktop redirect URI must exactly match the registered callback",
       );
     }
     return client;
@@ -46,6 +55,14 @@ export class OAuthClientRegistry {
         displayName: "Beecode iOS",
         consentTitle: "授权 Beecode iOS？",
         consentDescription: "iOS App 将使用你的 Beecode 账号和共享额度，但只能访问 iOS 会话。",
+      };
+    }
+    if (clientId === DESKTOP_OAUTH_CLIENT_ID) {
+      return {
+        clientId,
+        displayName: "Beecode Desktop",
+        consentTitle: "授权 Beecode Desktop？",
+        consentDescription: "Desktop App 将使用你的 Beecode 账号和共享额度，但只能访问 Desktop 会话。",
       };
     }
     throw new BeecodeError(ErrorCodes.AUTHORIZATION_DENIED, "OAuth client is not registered");

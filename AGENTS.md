@@ -28,6 +28,7 @@ Cross-platform work follows [`docs/development/platform-development-guidelines.m
 - `apps/cli/AGENTS.md`
 - `apps/web/AGENTS.md`
 - `apps/ios/AGENTS.md`
+- `apps/desktop/AGENTS.md`
 
 Before changing an application, read its local `AGENTS.md` and the phase design documents it routes to. Skill loading remains progressive: select only the skills needed for the current task instead of loading every skill associated with a platform.
 

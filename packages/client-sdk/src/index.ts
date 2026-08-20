@@ -2,6 +2,7 @@ import type {
   AgentEvent,
   AgentEventEnvelope,
   AgentProtocolService,
+  BrowserWorkspaceReference,
   Capability,
   CreateSessionInput,
   Id,
@@ -91,8 +92,13 @@ export class BeecodeClient {
     return this.transport.updateSession(input);
   }
 
-  submitMessage(sessionId: Id, text: string, idempotencyKey?: string): Promise<SubmitMessageResult> {
-    return this.transport.submitMessage({ sessionId, text, idempotencyKey });
+  submitMessage(
+    sessionId: Id,
+    text: string,
+    idempotencyKey?: string,
+    workspace?: BrowserWorkspaceReference,
+  ): Promise<SubmitMessageResult> {
+    return this.transport.submitMessage({ sessionId, text, idempotencyKey, workspace });
   }
 
   cancelTurn(sessionId: Id, turnId: Id): Promise<void> {

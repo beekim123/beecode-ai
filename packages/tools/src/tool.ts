@@ -1,4 +1,4 @@
-import type { Surface, ToolResult, ToolSchema } from "@beecode/protocol";
+import type { Id, Surface, ToolResult, ToolSchema } from "@beecode/protocol";
 
 /**
  * Tool 契约（设计文档第 9 节）。
@@ -13,12 +13,17 @@ export interface Tool<TInput = unknown, TOutput = unknown> {
   validate(input: unknown): string | null;
   /** 无副作用执行；抛出的错误会被 Registry 转换为安全错误 */
   execute(input: TInput, ctx: ToolExecutionContext): Promise<TOutput>;
+  /** Dynamic host state such as a selected Workspace may hide a registered tool. */
+  isAvailable?(): boolean;
   /** 该工具在哪些 Surface 可用；缺省表示全部可用 */
   readonly surfaces?: Surface[];
 }
 
 export interface ToolExecutionContext {
   signal: AbortSignal;
+  sessionId?: Id;
+  turnId?: Id;
+  toolCallId?: Id;
 }
 
 export interface RegisteredTool {

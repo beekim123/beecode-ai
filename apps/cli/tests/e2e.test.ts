@@ -1,10 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PassThrough } from "node:stream";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createBackendServer, FakeProviderAdapter, InMemoryBackendStore } from "@beecode/backend";
 import type { ModelGateway } from "@beecode/protocol";
 import { FakeModelGateway } from "@beecode/testing";
+import { LocalWorkspaceSource } from "@beecode/tools";
 import { composeCli } from "../src/compose.js";
 import { runRepl } from "../src/repl.js";
 
@@ -44,7 +48,7 @@ interface ReplHarness {
   done: Promise<void>;
 }
 
-function startRepl(gateway?: ModelGateway): ReplHarness {
+function startRepl(gateway?: ModelGateway, workspace?: LocalWorkspaceSource): ReplHarness {
   const input = new PassThrough();
   const output = new PassThrough();
   let buffer = "";
@@ -63,8 +67,9 @@ function startRepl(gateway?: ModelGateway): ReplHarness {
   const { client } = composeCli({
     config: { backendUrl: baseUrl, token, accountId: "test" },
     gateway,
+    workspace,
   });
-  const done = runRepl({ client, input, output });
+  const done = runRepl({ client, input, output, workspace: workspace?.getSummary() });
 
   const waitUntil = (predicate: () => boolean, description: string, timeoutMs = 10_000) =>
     new Promise<void>((resolve, reject) => {
@@ -202,5 +207,33 @@ describe("CLI 端到端", () => {
 
     repl.send("/exit");
     await repl.done;
+  });
+
+  it("binds an authorized Workspace and completes a read_file Tool Call", async () => {
+    const root = await mkdtemp(join(tmpdir(), "beecode-cli-workspace-"));
+    try {
+      await writeFile(join(root, "README.md"), "workspace from CLI\n");
+      const workspace = new LocalWorkspaceSource();
+      await workspace.configure(root);
+      const gateway = new FakeModelGateway({
+        steps: [
+          { kind: "tool_call", name: "read_file", input: { path: "README.md" } },
+          { kind: "text", text: "Workspace file loaded" },
+        ],
+      });
+      const repl = startRepl(gateway, workspace);
+      await repl.waitFor("Workspace:");
+
+      repl.send("读取 README.md");
+      await repl.waitFor("Workspace file loaded");
+      expect(repl.text()).toContain("Tool: read_file");
+      expect(repl.text()).toContain("workspace from CLI");
+
+      await repl.waitForSequence(["[done", "\nYou: "]);
+      repl.send("/exit");
+      await repl.done;
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });

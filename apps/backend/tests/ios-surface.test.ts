@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { ErrorCodes, type Page, type Session, type Snapshot, type Turn } from "@beecode/protocol";
+import {
+  ErrorCodes,
+  type Page,
+  type Session,
+  type SessionSnapshot,
+  type Turn,
+} from "@beecode/protocol";
 import { createBackendApp } from "../src/app.js";
 import { hashSecret, InMemoryBackendStore } from "../src/store.js";
 import { FakeProviderAdapter } from "../src/provider/fake.js";
@@ -138,10 +144,10 @@ async function waitForIOSTerminalSnapshot(
   app: ReturnType<typeof createBackendApp>,
   token: string,
   sessionId: string,
-): Promise<Snapshot> {
+): Promise<SessionSnapshot> {
   for (let attempt = 0; attempt < 100; attempt += 1) {
     const response = await jsonRequest(app, `/v1/ios/sessions/${sessionId}`, token);
-    const snapshot = (await response.json()) as Snapshot;
+    const snapshot = (await response.json()) as SessionSnapshot;
     if (["completed", "failed", "cancelled"].includes(snapshot.turns.at(-1)?.status ?? "")) {
       return snapshot;
     }

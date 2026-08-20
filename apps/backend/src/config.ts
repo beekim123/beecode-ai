@@ -14,6 +14,7 @@ export interface BackendConfig {
   webOrigin: string;
   publicBaseUrl: string;
   iosOAuthRedirectUri: string;
+  desktopOAuthRedirectUri: string;
   cookieSecure: boolean;
   devAuthEnabled: boolean;
   browserSessionTtlSeconds: number;
@@ -147,6 +148,7 @@ export function parseBackendConfigFile(raw: string, source: string): BackendConf
       case "webOrigin":
       case "publicBaseUrl":
       case "iosOAuthRedirectUri":
+      case "desktopOAuthRedirectUri":
         config[key] = expectString(value, key, source);
         break;
       case "cookieSecure":
@@ -221,6 +223,12 @@ function resolveConfig(file: BackendConfigFile, env: NodeJS.ProcessEnv): Backend
         file.iosOAuthRedirectUri ??
         "ai.beecode.ios://oauth/callback",
     ),
+    desktopOAuthRedirectUri: parseCustomRedirectUri(
+      env.BEECODE_DESKTOP_OAUTH_REDIRECT_URI ??
+        file.desktopOAuthRedirectUri ??
+        "ai.beecode.desktop://oauth/callback",
+      "BEECODE_DESKTOP_OAUTH_REDIRECT_URI",
+    ),
     cookieSecure: parseBoolean(env.BEECODE_COOKIE_SECURE, file.cookieSecure ?? false, "BEECODE_COOKIE_SECURE"),
     devAuthEnabled,
     browserSessionTtlSeconds: parseInteger(
@@ -291,12 +299,16 @@ function parseHttpUrl(value: string, name: string): string {
 }
 
 function parseIOSRedirectUri(value: string): string {
+  return parseCustomRedirectUri(value, "BEECODE_IOS_OAUTH_REDIRECT_URI");
+}
+
+function parseCustomRedirectUri(value: string, name: string): string {
   const url = new URL(value);
-  if (!url.protocol.endsWith(":" ) || url.protocol === "http:" || url.protocol === "https:") {
-    throw new Error("BEECODE_IOS_OAUTH_REDIRECT_URI must use a custom application scheme");
+  if (!url.protocol.endsWith(":") || url.protocol === "http:" || url.protocol === "https:") {
+    throw new Error(`${name} must use a custom application scheme`);
   }
   if (url.search || url.hash) {
-    throw new Error("BEECODE_IOS_OAUTH_REDIRECT_URI cannot contain a query or fragment");
+    throw new Error(`${name} cannot contain a query or fragment`);
   }
   return url.toString();
 }

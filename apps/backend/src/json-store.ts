@@ -214,7 +214,12 @@ function parseSessionRecord(value: unknown, index: number): SessionRecord {
   if (!isRecord(value)) throw new TypeError(`sessions[${index}] must be an object`);
   const snapshot = parseSessionSnapshot(value, `sessions[${index}]`);
   const idempotencyKeys = value.idempotencyKeys;
-  if (idempotencyKeys === undefined) return snapshot;
+  const activeRuntimeId = typeof value.activeRuntimeId === "string"
+    ? requiredString(value.activeRuntimeId, `sessions[${index}].activeRuntimeId`)
+    : undefined;
+  if (idempotencyKeys === undefined) {
+    return activeRuntimeId ? { ...snapshot, activeRuntimeId } : snapshot;
+  }
   if (!isRecord(idempotencyKeys)) {
     throw new TypeError(`sessions[${index}].idempotencyKeys must be an object`);
   }
@@ -226,7 +231,11 @@ function parseSessionRecord(value: unknown, index: number): SessionRecord {
       textHash: requiredString(idempotency.textHash, `sessions[${index}].idempotencyKeys.${key}.textHash`),
     };
   }
-  return { ...snapshot, idempotencyKeys: parsed };
+  return {
+    ...snapshot,
+    idempotencyKeys: parsed,
+    ...(activeRuntimeId ? { activeRuntimeId } : {}),
+  };
 }
 
 function parseOptionalArray<TValue>(

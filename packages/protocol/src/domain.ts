@@ -37,7 +37,49 @@ export interface SessionLiveState {
   /** 当前 Runtime 实例内、当前 Session 的单调递增序号。 */
   sequence: number;
   activeTurnId?: Id;
+  /** Browser-local tool work that may need to be resumed after an SSE reconnect. */
+  browserWorkspaceRequests?: BrowserWorkspaceToolRequest[];
 }
+
+/** Browser-local directory authorization. The handle and absolute path never cross the network. */
+export interface BrowserWorkspaceReference {
+  id: Id;
+  name: string;
+}
+
+export type BrowserWorkspaceOperation =
+  | { kind: "list" }
+  | { kind: "read"; path: string };
+
+export interface BrowserWorkspaceToolRequest {
+  turnId: Id;
+  toolCallId: Id;
+  workspaceId: Id;
+  operation: BrowserWorkspaceOperation;
+}
+
+export interface BrowserWorkspaceFileEntry {
+  path: string;
+  sizeBytes: number;
+  isReadable: boolean;
+}
+
+export type BrowserWorkspaceOperationOutput =
+  | { kind: "list"; files: BrowserWorkspaceFileEntry[] }
+  | { kind: "file"; path: string; sizeBytes: number; content: string };
+
+export const BROWSER_WORKSPACE_ERROR_CODES = [
+  "not_found",
+  "not_readable",
+  "permission_denied",
+  "workspace_unavailable",
+] as const;
+
+export type BrowserWorkspaceErrorCode = (typeof BROWSER_WORKSPACE_ERROR_CODES)[number];
+
+export type BrowserWorkspaceOperationResult =
+  | { ok: true; output: BrowserWorkspaceOperationOutput }
+  | { ok: false; error: { code: BrowserWorkspaceErrorCode } };
 
 export type TurnStatus =
   | "queued"

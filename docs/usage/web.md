@@ -31,9 +31,12 @@ Web 端支持：
 - HTTP 接受式 Turn 提交、幂等键、同 Session 并发保护和取消。
 - SSE 实时事件、sequence、心跳、断线重连和快照合并。
 - Tool 详情、额度与 Capability 页面、浅色/深色主题。
+- 用户显式选择目录后，通过当前标签页的目录句柄按需运行 `read_file`。
 - 桌面 Sidebar 与移动端抽屉布局。
 
-Web Runtime 当前只允许 `calculator`。文件、Shell、Git、附件和本机凭据均不可用，并在 `/v1/web/capabilities` 中显式报告为不可用。
+Web Runtime 支持 `calculator`，并可对浏览器授权的目录使用 `read_file`。在 Composer 上方点击文件夹按钮选择目录后，选择动作只保存浏览器目录句柄，不读取或上传文件。模型请求列目录或读取文件时，当前标签页才访问对应相对路径并把该次结果返回 Backend；移除 Workspace 后该能力立即停止用于后续 Turn。
+
+Web Workspace 是当前标签页内临时持有的只读目录授权。Turn 只提交随机 Workspace ID 和显示名称；绝对路径、目录清单和目录内容都不会随 Turn 上传，Workspace 也不会写入 Session 历史。页面刷新后需要重新选择目录。`read_file` 单次最多列出 250 个文件，只读取 12 KiB 以内的有效 UTF-8 文本；二进制、超大文件、危险相对路径和失效权限会被拒绝。Chrome、Edge 等支持 File System Access API 的浏览器可使用该能力，不支持时入口会显示不可用。Shell、Git、文件写入、附件和本机凭据仍不可用。
 
 ## 3. 认证与账号
 

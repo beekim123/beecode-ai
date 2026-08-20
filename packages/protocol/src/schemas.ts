@@ -1,5 +1,9 @@
 import * as z from "zod";
-import { SURFACES } from "./domain.js";
+import { BROWSER_WORKSPACE_ERROR_CODES, SURFACES } from "./domain.js";
+import {
+  WORKSPACE_FILE_MAX_CONTENT_BYTES,
+  WORKSPACE_MAX_LISTED_FILES,
+} from "./agent-protocol.js";
 
 const IdSchema = z.string().min(1);
 const TimestampSchema = z.string().min(1).meta({ format: "date-time" });
@@ -100,10 +104,96 @@ export const SessionSchema = z
   })
   .meta({ id: "Session" });
 
+export const BrowserWorkspaceReferenceSchema = z
+  .strictObject({
+    id: IdSchema,
+    name: z.string().trim().min(1).max(200),
+  })
+  .meta({ id: "BrowserWorkspaceReference" });
+
+export const BrowserWorkspaceOperationSchema = z
+  .discriminatedUnion("kind", [
+    z.strictObject({ kind: z.literal("list") }),
+    z.strictObject({
+      kind: z.literal("read"),
+      path: z.string().min(1).max(1024).refine(
+        isSafeWorkspaceRelativePath,
+        "path must be a workspace-relative POSIX path",
+      ),
+    }),
+  ])
+  .meta({ id: "BrowserWorkspaceOperation" });
+
+export const BrowserWorkspaceToolRequestSchema = z
+  .strictObject({
+    turnId: IdSchema,
+    toolCallId: IdSchema,
+    workspaceId: IdSchema,
+    operation: BrowserWorkspaceOperationSchema,
+  })
+  .meta({ id: "BrowserWorkspaceToolRequest" });
+
+export const BrowserWorkspaceFileEntrySchema = z
+  .strictObject({
+    path: z.string().min(1).max(1024).refine(
+      isSafeWorkspaceRelativePath,
+      "path must be a workspace-relative POSIX path",
+    ),
+    sizeBytes: z.number().int().nonnegative(),
+    isReadable: z.boolean(),
+  })
+  .meta({ id: "BrowserWorkspaceFileEntry" });
+
+export const BrowserWorkspaceOperationResultSchema = z
+  .discriminatedUnion("ok", [
+    z.strictObject({
+      ok: z.literal(true),
+      output: z.discriminatedUnion("kind", [
+        z.strictObject({
+          kind: z.literal("list"),
+          files: z.array(BrowserWorkspaceFileEntrySchema).max(WORKSPACE_MAX_LISTED_FILES),
+        }).superRefine((output, context) => {
+          const paths = new Set<string>();
+          for (const [index, file] of output.files.entries()) {
+            if (paths.has(file.path)) {
+              context.addIssue({
+                code: "custom",
+                path: ["files", index, "path"],
+                message: "workspace file paths must be unique",
+              });
+            }
+            paths.add(file.path);
+          }
+        }),
+        z.strictObject({
+          kind: z.literal("file"),
+          path: z.string().min(1).max(1024).refine(
+            isSafeWorkspaceRelativePath,
+            "path must be a workspace-relative POSIX path",
+          ),
+          sizeBytes: z.number().int().nonnegative().max(WORKSPACE_FILE_MAX_CONTENT_BYTES),
+          content: z.string().refine(
+            (content) => utf8ByteLength(content) <= WORKSPACE_FILE_MAX_CONTENT_BYTES,
+            `content must not exceed ${WORKSPACE_FILE_MAX_CONTENT_BYTES} UTF-8 bytes`,
+          ),
+        }).refine(
+          (output) => output.sizeBytes === utf8ByteLength(output.content),
+          { message: "sizeBytes must equal the UTF-8 content size", path: ["sizeBytes"] },
+        ),
+      ]),
+    }),
+    z.strictObject({
+      ok: z.literal(false),
+      error: z.strictObject({ code: z.enum(BROWSER_WORKSPACE_ERROR_CODES) }),
+    }),
+  ])
+  .meta({ id: "BrowserWorkspaceOperationResult" });
+
 export const SessionLiveStateSchema = z
   .object({
     sequence: z.number().int().nonnegative(),
     activeTurnId: IdSchema.optional(),
+    browserWorkspaceRequests: z.array(BrowserWorkspaceToolRequestSchema).optional(),
   })
   .meta({ id: "SessionLiveState" });
 
@@ -181,6 +271,7 @@ export const AgentEventSchema = z
       messageId: IdSchema,
       partId: IdSchema,
       toolCall: ToolCallSchema,
+      browserWorkspaceRequest: BrowserWorkspaceToolRequestSchema.optional(),
     }),
     z.object({
       type: z.literal("tool.started"),
@@ -263,6 +354,24 @@ export const ModelStreamEventSchema = z
   ])
   .meta({ id: "ModelStreamEvent" });
 
+export const DesktopSurfacePolicySchema = z
+  .strictObject({
+    surface: z.literal("desktop"),
+    allowedTools: z.array(z.string().min(1)),
+    allowedFeatures: z.strictObject({
+      localWorkspace: z.boolean(),
+      shell: z.boolean(),
+      git: z.boolean(),
+      attachments: z.boolean(),
+    }),
+    limits: z.strictObject({
+      maxTurnSteps: z.number().int().positive(),
+      maxInputBytes: z.number().int().positive(),
+      maxSnapshotBytes: z.number().int().positive(),
+    }),
+  })
+  .meta({ id: "DesktopSurfacePolicy" });
+
 export const CreateSessionRequestSchema = z
   .object({ title: z.string().trim().max(200).optional() })
   .meta({ id: "CreateSessionRequest" });
@@ -283,6 +392,16 @@ export const ReplaceCliSessionRequestSchema = z
   })
   .meta({ id: "ReplaceCliSessionRequest" });
 
+export const ReplaceDesktopSessionSnapshotRequestSchema = z
+  .strictObject({
+    expectedVersion: z.number().int().positive(),
+    runtimeId: IdSchema,
+    replacesRuntimeId: IdSchema.optional(),
+    messages: z.array(MessageSchema),
+    turns: z.array(TurnSchema),
+  })
+  .meta({ id: "ReplaceDesktopSessionSnapshotRequest" });
+
 export const UpdateSessionRequestSchema = z
   .object({
     expectedVersion: z.number().int().positive(),
@@ -297,12 +416,35 @@ export const UpdateSessionRequestSchema = z
 /** @deprecated Use the surface-neutral schema name. */
 export const UpdateWebSessionRequestSchema = UpdateSessionRequestSchema;
 
+export const WorkspaceSummarySchema = z
+  .strictObject({
+    id: z.string().min(1),
+    name: z.string().trim().min(1).max(200),
+    fileCount: z.number().int().nonnegative(),
+  })
+  .meta({ id: "WorkspaceSummary" });
+
 export const SubmitTurnRequestSchema = z
-  .object({
+  .strictObject({
     text: z.string().trim().min(1).max(1_048_576),
     idempotencyKey: z.string().min(8).max(200),
   })
   .meta({ id: "SubmitTurnRequest" });
+
+export const SubmitWebTurnRequestSchema = z
+  .strictObject({
+    text: z.string().trim().min(1).max(1_048_576),
+    idempotencyKey: z.string().min(8).max(200),
+    workspace: BrowserWorkspaceReferenceSchema.optional(),
+  })
+  .meta({ id: "SubmitWebTurnRequest" });
+
+export const SubmitBrowserWorkspaceToolResultRequestSchema = z
+  .strictObject({
+    workspaceId: IdSchema,
+    result: BrowserWorkspaceOperationResultSchema,
+  })
+  .meta({ id: "SubmitBrowserWorkspaceToolResultRequest" });
 
 export const SubmitTurnResponseSchema = z.object({ turn: TurnSchema }).meta({ id: "SubmitTurnResponse" });
 
@@ -336,3 +478,15 @@ export const AccountSummarySchema = z
     createdAt: TimestampSchema,
   })
   .meta({ id: "AccountSummary" });
+
+function isSafeWorkspaceRelativePath(path: string): boolean {
+  if (path.includes("\\") || path.includes("\0") || path.startsWith("/")) return false;
+  if (/^[A-Za-z]:/.test(path)) return false;
+  return path
+    .split("/")
+    .every((segment) => segment.length > 0 && segment !== "." && segment !== "..");
+}
+
+function utf8ByteLength(value: string): number {
+  return new TextEncoder().encode(value).byteLength;
+}

@@ -12,11 +12,13 @@ import type {
 } from "./domain.js";
 import type { AgentEventEnvelope } from "./agent-protocol.js";
 import type { ModelRequest, ModelStreamEvent } from "./backend-protocol.js";
+import type { DesktopSurfacePolicy } from "./backend-protocol.js";
 import {
   AgentEventEnvelopeSchema,
   AccountSummarySchema,
   BeecodeErrorShapeSchema,
   CapabilitySetSchema,
+  DesktopSurfacePolicySchema,
   MessageSchema,
   ModelRequestSchema,
   ModelStreamEventSchema,
@@ -84,6 +86,13 @@ export function parseQuotaSnapshot(value: unknown, path = "quota"): QuotaSnapsho
 
 export function parseCapabilitySet(value: unknown, path = "capabilities"): CapabilitySet {
   return parseWithSchema(CapabilitySetSchema, value, path);
+}
+
+export function parseDesktopSurfacePolicy(
+  value: unknown,
+  path = "desktopSurfacePolicy",
+): DesktopSurfacePolicy {
+  return parseWithSchema(DesktopSurfacePolicySchema, value, path);
 }
 
 export function parseAgentEventEnvelope(

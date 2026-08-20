@@ -6,6 +6,7 @@ import {
   type Session,
   type SessionSnapshot,
   type Turn,
+  type ReplaceDesktopSessionSnapshotRequest,
 } from "@beecode/protocol";
 
 export interface AcceptedTurn {
@@ -36,6 +37,10 @@ export interface SessionRepository {
     turn: Turn;
     messages: Message[];
   }): Promise<void>;
+  replaceDesktopSnapshot(input: ReplaceDesktopSessionSnapshotRequest & {
+    accountId: string;
+    sessionId: string;
+  }): Promise<Session>;
   recoverInterruptedTurns(): Promise<number>;
 }
 

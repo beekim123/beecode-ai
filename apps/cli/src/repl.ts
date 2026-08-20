@@ -1,6 +1,6 @@
 import { createInterface, type Interface } from "node:readline";
 import type { BeecodeClient } from "@beecode/client-sdk";
-import { BeecodeError, type Id, type Session } from "@beecode/protocol";
+import { BeecodeError, type Id, type Session, type WorkspaceSummary } from "@beecode/protocol";
 import { TerminalRenderer } from "./render.js";
 
 /**
@@ -11,6 +11,7 @@ export interface ReplOptions {
   client: BeecodeClient;
   input: NodeJS.ReadableStream;
   output: NodeJS.WritableStream;
+  workspace?: WorkspaceSummary;
 }
 
 const HELP = `Commands:
@@ -38,6 +39,9 @@ export async function runRepl(options: ReplOptions): Promise<void> {
   const done = new Promise<void>((resolve) => (resolveExit = resolve));
 
   write(`Session: ${session.title} (${session.id})\n`);
+  if (options.workspace) {
+    write(`Workspace: ${options.workspace.name} (${options.workspace.fileCount} files)\n`);
+  }
   prompt();
 
   rl.on("line", (raw) => {

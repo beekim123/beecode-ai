@@ -6,3 +6,4 @@ export * from "./backend-protocol.js";
 export * from "./schemas.js";
 export * from "./openapi.js";
 export * from "./validation.js";
+export * from "./desktop-ipc.js";

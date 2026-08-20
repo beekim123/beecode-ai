@@ -5,7 +5,12 @@ import {
   type ToolResult,
   type ToolSchema,
 } from "@beecode/protocol";
-import type { Tool, ToolExecutionRecord, ToolRegistryOptions } from "./tool.js";
+import type {
+  Tool,
+  ToolExecutionContext,
+  ToolExecutionRecord,
+  ToolRegistryOptions,
+} from "./tool.js";
 
 const DEFAULT_MAX_RESULT_BYTES = 16 * 1024;
 const DEFAULT_TIMEOUT_MS = 10_000;
@@ -39,7 +44,7 @@ export class ToolRegistry {
   schemasFor(surface: Surface): ToolSchema[] {
     const schemas: ToolSchema[] = [];
     for (const tool of this.tools.values()) {
-      if (tool.surfaces && !tool.surfaces.includes(surface)) continue;
+      if ((tool.surfaces && !tool.surfaces.includes(surface)) || tool.isAvailable?.() === false) continue;
       schemas.push({ name: tool.name, description: tool.description, inputSchema: tool.inputSchema });
     }
     return schemas;
@@ -51,9 +56,14 @@ export class ToolRegistry {
     input: unknown,
     surface: Surface,
     signal: AbortSignal,
+    context: Omit<ToolExecutionContext, "signal"> = {},
   ): Promise<ToolExecutionRecord> {
     const tool = this.tools.get(name);
-    if (!tool || (tool.surfaces && !tool.surfaces.includes(surface))) {
+    if (
+      !tool ||
+      (tool.surfaces && !tool.surfaces.includes(surface)) ||
+      tool.isAvailable?.() === false
+    ) {
       return failed(`Tool is not available: ${name}`, ErrorCodes.TOOL_NOT_FOUND);
     }
     const invalid = tool.validate(input);
@@ -68,7 +78,7 @@ export class ToolRegistry {
       if (signal.aborted) {
         return failed("Tool execution cancelled", ErrorCodes.TURN_CANCELLED);
       }
-      const execution = tool.execute(input, { signal: combined });
+      const execution = tool.execute(input, { ...context, signal: combined });
       const output = await waitForAbort(execution, combined);
       const result = this.toResult(output);
       return { result, durationMs: Date.now() - started };

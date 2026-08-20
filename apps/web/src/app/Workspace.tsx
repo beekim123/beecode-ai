@@ -19,6 +19,7 @@ import {
 import { navigate } from "../lib/navigation.js";
 import { SessionSidebar } from "../components/SessionSidebar.js";
 import { SessionView } from "../features/sessions/SessionView.js";
+import type { BrowserWorkspace } from "../features/workspaces/browser-workspace.js";
 
 interface WorkspaceProps {
   account: AccountSummary;
@@ -38,6 +39,7 @@ export function Workspace({ account, pathname }: WorkspaceProps): React.JSX.Elem
   const [theme, setTheme] = useState<"light" | "dark">(() => preferredTheme());
   const [archiveCandidate, setArchiveCandidate] = useState<Session>();
   const [isArchiving, setIsArchiving] = useState(false);
+  const [localWorkspace, setLocalWorkspace] = useState<BrowserWorkspace>();
   const archiveReturnFocus = useRef<HTMLElement | null>(null);
   const selectedSessionId = sessionIdFromPath(pathname);
 
@@ -161,7 +163,14 @@ export function Workspace({ account, pathname }: WorkspaceProps): React.JSX.Elem
         {pathname === "/settings/account" ? (
           <AccountSettings account={account} quota={quota} capabilities={capabilities} loggingOut={loggingOut} onLogout={() => void logout()} onMenu={() => setSidebarOpen(true)} onTheme={() => setTheme((current) => current === "dark" ? "light" : "dark")} theme={theme} />
         ) : selectedSessionId ? (
-          <SessionView key={selectedSessionId} sessionId={selectedSessionId} onMenu={() => setSidebarOpen(true)} onSessionChanged={handleSessionChanged} />
+          <SessionView
+            key={selectedSessionId}
+            sessionId={selectedSessionId}
+            workspace={localWorkspace}
+            onWorkspaceChange={setLocalWorkspace}
+            onMenu={() => setSidebarOpen(true)}
+            onSessionChanged={handleSessionChanged}
+          />
         ) : (
           <SessionLanding onMenu={() => setSidebarOpen(true)} onCreate={() => void createSession()} />
         )}

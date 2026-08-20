@@ -7,6 +7,7 @@ import {
   parseSessionSnapshot,
   type Session,
   type SessionSnapshot,
+  type UpdateSessionInput,
 } from "@beecode/protocol";
 
 /**
@@ -17,6 +18,8 @@ export interface BackendSessionStore {
   createSession(title?: string): Promise<Session>;
   listSessions(): Promise<Session[]>;
   getSnapshot(sessionId: string): Promise<SessionSnapshot>;
+  /** Surface-specific metadata update when snapshots cannot mutate Session fields. */
+  updateSession?(input: UpdateSessionInput): Promise<Session>;
   /** 乐观并发：版本不一致时后端拒绝（SESSION_VERSION_CONFLICT） */
   saveSnapshot(snapshot: SessionSnapshot, expectedVersion: number): Promise<Session>;
 }

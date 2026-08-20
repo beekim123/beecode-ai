@@ -1,11 +1,12 @@
 import { LoaderCircle, Send, Square } from "lucide-react";
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, type ReactNode } from "react";
 
 interface ComposerProps {
   value: string;
   isRunning: boolean;
   isConnected: boolean;
   isSending: boolean;
+  workspaceControl?: ReactNode;
   onChange(value: string): void;
   onSubmit(): void;
   onCancel(): void;
@@ -25,6 +26,9 @@ export function Composer(props: ComposerProps): React.JSX.Element {
 
   return (
     <div className="composer-wrap">
+      {props.workspaceControl ? (
+        <div className="composer-context">{props.workspaceControl}</div>
+      ) : null}
       <div className="composer">
         <label className="sr-only" htmlFor="message-composer">给 Beecode 发送消息</label>
         <textarea

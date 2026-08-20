@@ -1,4 +1,4 @@
-import type { BeecodeErrorShape, Usage } from "./domain.js";
+import type { BeecodeErrorShape, Message, Surface, Turn, Usage } from "./domain.js";
 
 /**
  * Runtime Backend Protocol：Runtime 与 Beecode 后端的契约（设计文档 4.2）。
@@ -50,4 +50,30 @@ export type FinishReason = "stop" | "tool_calls" | "length";
  */
 export interface ModelGateway {
   stream(request: ModelRequest, signal: AbortSignal): AsyncIterable<ModelStreamEvent>;
+}
+
+// ---- Desktop Runtime 与 Backend 的 surface policy / snapshot sync ----
+
+export interface DesktopSurfacePolicy {
+  surface: Extract<Surface, "desktop">;
+  allowedTools: string[];
+  allowedFeatures: {
+    localWorkspace: boolean;
+    shell: boolean;
+    git: boolean;
+    attachments: boolean;
+  };
+  limits: {
+    maxTurnSteps: number;
+    maxInputBytes: number;
+    maxSnapshotBytes: number;
+  };
+}
+
+export interface ReplaceDesktopSessionSnapshotRequest {
+  expectedVersion: number;
+  runtimeId: string;
+  replacesRuntimeId?: string;
+  messages: Message[];
+  turns: Turn[];
 }

@@ -7,7 +7,7 @@ import {
 } from "@beecode/agent-server";
 import { BeecodeClient, InProcessTransport } from "@beecode/client-sdk";
 import type { ModelGateway } from "@beecode/protocol";
-import { createDefaultToolRegistry } from "@beecode/tools";
+import { createDefaultToolRegistry, type ReadonlyWorkspaceSource } from "@beecode/tools";
 import type { CliConfig } from "./config.js";
 
 /**
@@ -27,6 +27,7 @@ export interface ComposeOptions {
   gateway?: ModelGateway;
   backend?: BackendSessionStore;
   fetchImpl?: typeof fetch;
+  workspace?: ReadonlyWorkspaceSource;
 }
 
 /**
@@ -36,7 +37,7 @@ export interface ComposeOptions {
  * 这样无需真的启动后端或调用模型。
  */
 export function composeCli(options: ComposeOptions): ComposedCli {
-  const tools = createDefaultToolRegistry();
+  const tools = createDefaultToolRegistry({ workspace: options.workspace });
   // 测试传了假后端或假模型就直接用；否则根据配置连接真实服务。
   const backend =
     options.backend ??

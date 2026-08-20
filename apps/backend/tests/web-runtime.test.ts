@@ -3,6 +3,7 @@ import {
   BEECODE_CSRF_HEADER_NAME,
   BEECODE_CSRF_HEADER_VALUE,
   ErrorCodes,
+  type BrowserWorkspaceToolRequest,
   type ModelRequest,
   type ModelStreamEvent,
   type Session,
@@ -157,6 +158,77 @@ describe("Web Agent vertical slice", () => {
     );
   });
 
+  it("delegates read_file to the browser that owns the Workspace reference", async () => {
+    const store = new InMemoryBackendStore();
+    const account = store.createAccount(10_000);
+    const repository = new StoreSessionRepository(store);
+    const host = new WebRuntimeHost({
+      repository,
+      modelGateway: new ModelGatewayService(store, new ReadFileProviderAdapter()),
+    });
+    const session = await repository.create(account.accountId, "Browser Workspace");
+
+    expect(host.getCapabilities()).toMatchObject({
+      tools: expect.arrayContaining([expect.objectContaining({ name: "read_file", available: true })]),
+      features: { localWorkspace: { available: true } },
+    });
+    const accepted = await host.submitTurn({
+      accountId: account.accountId,
+      sessionId: session.id,
+      text: "读取 README.md",
+      idempotencyKey: "web-workspace-read-0001",
+      workspace: { id: "browser_workspace_1", name: "browser-project" },
+    });
+    let browserRequest: BrowserWorkspaceToolRequest[] | undefined;
+    await waitUntil(async () => {
+      const snapshot = await host.getSnapshot(account.accountId, session.id);
+      browserRequest = snapshot.live?.browserWorkspaceRequests;
+      return browserRequest?.length === 1;
+    });
+
+    const otherAccount = store.createAccount(10_000);
+    await expect(
+      host.submitBrowserWorkspaceToolResult(
+        otherAccount.accountId,
+        session.id,
+        accepted.turn.id,
+        "read_file_call_1",
+        "browser_workspace_1",
+        {
+          ok: true,
+          output: { kind: "file", path: "README.md", sizeBytes: 17, content: "browser workspace" },
+        },
+      ),
+    ).rejects.toMatchObject({ code: ErrorCodes.SESSION_NOT_FOUND });
+
+    expect(browserRequest?.[0]).toMatchObject({
+      turnId: accepted.turn.id,
+      toolCallId: "read_file_call_1",
+      workspaceId: "browser_workspace_1",
+      operation: { kind: "read", path: "README.md" },
+    });
+    await host.submitBrowserWorkspaceToolResult(
+      account.accountId,
+      session.id,
+      accepted.turn.id,
+      "read_file_call_1",
+      "browser_workspace_1",
+      {
+        ok: true,
+        output: { kind: "file", path: "README.md", sizeBytes: 17, content: "browser workspace" },
+      },
+    );
+    await waitUntil(async () => {
+      const snapshot = await host.getSnapshot(account.accountId, session.id);
+      return snapshot.turns.at(-1)?.status === "completed";
+    });
+
+    const snapshot = await repository.getOwned(account.accountId, session.id);
+    expect(JSON.stringify(snapshot?.messages)).toContain('"name":"read_file"');
+    expect(JSON.stringify(snapshot?.messages)).toContain("browser workspace");
+    expect(JSON.stringify(snapshot)).not.toContain("browser_workspace_1");
+  });
+
   it("marks persisted non-terminal turns as interrupted during recovery", async () => {
     const store = new InMemoryBackendStore();
     const account = store.createAccount(10_000);
@@ -238,6 +310,27 @@ class BlockingProviderAdapter implements ProviderAdapter {
       signal.addEventListener("abort", onAbort, { once: true });
       if (signal.aborted) onAbort();
     });
+  }
+}
+
+class ReadFileProviderAdapter implements ProviderAdapter {
+  readonly name = "read-file-test";
+
+  async *stream(request: ModelRequest): AsyncIterable<ModelStreamEvent> {
+    const last = request.messages.at(-1);
+    if (last?.role === "tool") {
+      yield { type: "text_delta", text: "Workspace file read" };
+      yield { type: "usage", usage: { inputTokens: 10, outputTokens: 4, totalTokens: 14 } };
+      yield { type: "finish", reason: "stop" };
+      return;
+    }
+    expect(request.tools.map((tool) => tool.name)).toContain("read_file");
+    yield {
+      type: "tool_call",
+      toolCall: { id: "read_file_call_1", name: "read_file", input: { path: "README.md" } },
+    };
+    yield { type: "usage", usage: { inputTokens: 10, outputTokens: 4, totalTokens: 14 } };
+    yield { type: "finish", reason: "tool_calls" };
   }
 }
 

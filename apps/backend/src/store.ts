@@ -82,6 +82,8 @@ export interface SessionRecord {
   session: Session;
   messages: Message[];
   turns: Turn[];
+  /** Private Desktop execution ownership; never exposed in SessionSnapshot. */
+  activeRuntimeId?: string;
   /** Unique within this account and Session. */
   idempotencyKeys?: Record<string, { turnId: string; textHash: string }>;
 }

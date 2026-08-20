@@ -40,6 +40,20 @@ export class FakeProviderAdapter implements ProviderAdapter {
       return;
     }
 
+    if (
+      last?.role === "user" &&
+      last.content.trim() === "读取 README.md" &&
+      request.tools.some((tool) => tool.name === "read_file")
+    ) {
+      yield {
+        type: "tool_call",
+        toolCall: { id: `tc_${randomUUID()}`, name: "read_file", input: { path: "README.md" } },
+      };
+      yield { type: "usage", usage: fakeUsage(request) };
+      yield { type: "finish", reason: "tool_calls" };
+      return;
+    }
+
     const echo = last?.role === "user" ? last.content : "OK";
     yield { type: "text_delta", text: `Echo: ${echo}` };
     yield { type: "usage", usage: fakeUsage(request) };

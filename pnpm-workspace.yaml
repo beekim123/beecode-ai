@@ -1,5 +1,9 @@
 packages:
   - "apps/*"
   - "packages/*"
+nodeLinker: hoisted
 allowBuilds:
+  electron: true
   esbuild: true
+overrides:
+  "@electron/rebuild": "4.0.2"

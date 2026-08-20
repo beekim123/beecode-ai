@@ -15,6 +15,7 @@ export type BackendAppConfig = Pick<
   | "webOrigin"
   | "publicBaseUrl"
   | "iosOAuthRedirectUri"
+  | "desktopOAuthRedirectUri"
   | "cookieSecure"
   | "devAuthEnabled"
   | "browserSessionTtlSeconds"
@@ -44,4 +45,5 @@ export interface BackendAppServices {
   webRuntime: BackendSurfaceRuntimeHost;
   iosSessions: SessionRepository;
   iosRuntime: BackendSurfaceRuntimeHost;
+  desktopSessions: SessionRepository;
 }
